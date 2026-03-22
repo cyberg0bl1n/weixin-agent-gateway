@@ -136,7 +136,7 @@ export function createWeixinReplyErrorHandler(params: {
       lowerErrMsg.includes("post /upload")
     ) {
       const backendLabel = info.kind === "codex" ? "Codex" : info.kind === "claude" ? "Claude Code" : "Agent";
-      notice = `⚠️ ${backendLabel} 后端连接失败，请检查 AgentAPI 是否已启动以及地址配置是否正确。`;
+      notice = `⚠️ ${backendLabel} 后端连接失败，请检查 agentapi 和对应命令是否可用，或 AgentAPI 地址配置是否正确。`;
     } else if (errMsg.includes("remote media download failed") || errMsg.includes("fetch")) {
       notice = "⚠️ 媒体文件下载失败，请检查链接是否可访问。";
     } else if (

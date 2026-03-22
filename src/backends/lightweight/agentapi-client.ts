@@ -5,6 +5,10 @@ import type {
   WeixinLightweightBackendInput,
   WeixinLightweightBackendOutput,
 } from "../contracts.js";
+import {
+  ensureAgentApiRunning,
+  type AgentApiAutoStartBackendId,
+} from "./agentapi-launcher.js";
 
 type AgentApiMessage = {
   id: number;
@@ -39,6 +43,9 @@ type AgentApiClientOptions = {
   requestTimeoutMs?: number;
   settleTimeoutMs?: number;
   pollIntervalMs?: number;
+  autoStart?: {
+    backendId: AgentApiAutoStartBackendId;
+  };
 };
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
@@ -113,6 +120,7 @@ export class AgentApiClient {
   private readonly requestTimeoutMs: number;
   private readonly settleTimeoutMs: number;
   private readonly pollIntervalMs: number;
+  private readonly autoStart?: AgentApiClientOptions["autoStart"];
 
   constructor(options: AgentApiClientOptions) {
     this.label = options.label;
@@ -120,6 +128,7 @@ export class AgentApiClient {
     this.requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.settleTimeoutMs = options.settleTimeoutMs ?? DEFAULT_SETTLE_TIMEOUT_MS;
     this.pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
+    this.autoStart = options.autoStart;
   }
 
   async getStatus(): Promise<AgentApiStatusResponse> {
@@ -144,12 +153,48 @@ export class AgentApiClient {
 
   async waitUntilStable(timeoutMs = this.settleTimeoutMs): Promise<void> {
     const startedAt = Date.now();
+    let lastError: unknown;
     while (Date.now() - startedAt < timeoutMs) {
-      const status = await this.getStatus();
-      if (status.status === "stable") return;
+      try {
+        const status = await this.getStatus();
+        if (status.status === "stable") return;
+      } catch (err) {
+        lastError = err;
+      }
       await sleep(this.pollIntervalMs);
     }
+    if (lastError instanceof Error) {
+      throw lastError;
+    }
     throw new Error(`${this.label}: agent did not reach stable state in time`);
+  }
+
+  private async canGetStatus(timeoutMs = Math.min(this.requestTimeoutMs, 1_500)): Promise<boolean> {
+    try {
+      await fetchJson<AgentApiStatusResponse>({
+        url: `${this.baseUrl}/status`,
+        timeoutMs,
+        label: `${this.label} GET /status`,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async ensureReady(): Promise<void> {
+    const statusAvailable = await this.canGetStatus();
+
+    if (!statusAvailable && this.autoStart) {
+      await ensureAgentApiRunning({
+        backendId: this.autoStart.backendId,
+        baseUrl: this.baseUrl,
+        requestTimeoutMs: this.requestTimeoutMs,
+        pollIntervalMs: this.pollIntervalMs,
+      });
+    }
+
+    await this.waitUntilStable();
   }
 
   async postMessage(content: string): Promise<void> {
@@ -195,7 +240,7 @@ export class AgentApiClient {
   async runLightweightConversation(
     input: WeixinLightweightBackendInput,
   ): Promise<WeixinLightweightBackendOutput | void> {
-    await this.waitUntilStable();
+    await this.ensureReady();
     const beforeMessages = await this.getMessages();
     const lastSeenId = beforeMessages.length > 0 ? beforeMessages[beforeMessages.length - 1].id : 0;
 

@@ -13,5 +13,4 @@ This installer will:
 - enable the plugin in OpenClaw config
 - run QR login
 - install `agentapi` if it is missing
-- print next-step commands for Codex / Claude Code backends
-
+- print the default backend-switch flow

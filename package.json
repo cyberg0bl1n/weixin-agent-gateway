@@ -20,7 +20,11 @@
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "prepublishOnly": "npm run typecheck && npm run build"
+    "prepublishOnly": "npm run typecheck && npm run build",
+    "publish:npm": "node ./scripts/publish-npm.mjs all",
+    "publish:npm:dry-run": "node ./scripts/publish-npm.mjs all --dry-run",
+    "publish:npm:plugin": "node ./scripts/publish-npm.mjs plugin",
+    "publish:npm:cli": "node ./scripts/publish-npm.mjs cli"
   },
   "engines": {
     "node": ">=22"
@@ -51,5 +55,8 @@
       "npmSpec": "@bytepioneer-ai/weixin-agent-gateway",
       "defaultChoice": "npm"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

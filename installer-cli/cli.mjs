@@ -11,6 +11,7 @@ const PLUGIN_SPEC =
 const CHANNEL_ID = process.env.WEIXIN_GATEWAY_CHANNEL_ID?.trim() || "weixin-agent-gateway";
 const PLUGIN_ENTRY_ID = process.env.WEIXIN_GATEWAY_PLUGIN_ID?.trim() || "weixin-agent-gateway";
 const OFFICIAL_PLUGIN_ENTRY_ID = "openclaw-weixin";
+const ENABLE_OFFICIAL_PLUGIN_CMD = "openclaw config set plugins.entries.openclaw-weixin.enabled true";
 const AGENTAPI_VERSION = process.env.AGENTAPI_VERSION?.trim() || "latest";
 const DEFAULT_CODEX_AGENTAPI_URL = "http://127.0.0.1:3284";
 const DEFAULT_CLAUDE_AGENTAPI_URL = "http://127.0.0.1:3285";
@@ -190,7 +191,7 @@ function disableOfficialPlugin() {
     });
     warn("由于本插件与官方 openclaw-weixin 存在冲突，已尝试禁用官方插件。");
     console.log(
-      `本插件的微信连接逻辑与官方保持一致。后续如需重新启用官方插件，可执行：\n  openclaw config set plugins.entries.${OFFICIAL_PLUGIN_ENTRY_ID}.enabled true`,
+      `本插件的微信连接逻辑与官方保持一致。后续如需重新启用官方插件，可执行：\n  ${ENABLE_OFFICIAL_PLUGIN_CMD}`,
     );
     console.log(
       `如需仅启用本插件，可执行：\n  openclaw config set plugins.entries.${PLUGIN_ENTRY_ID}.enabled true`,
@@ -234,25 +235,22 @@ function printNextSteps(agentapiInfo) {
     console.log(`AgentAPI 已下载到: ${agentapiInfo.targetPath}`);
     console.log();
   }
-  console.log("1. 启动 Codex AgentAPI");
-  console.log(`   agentapi server --type=codex -- codex --port 3284`);
-  console.log();
-  console.log("2. 启动 Claude Code AgentAPI");
-  console.log(`   agentapi server -- claude --port 3285`);
-  console.log();
-  console.log("3. 设置环境变量");
-  if (isWindows()) {
-    console.log(`   $env:WEIXIN_CODEX_AGENTAPI_URL="${DEFAULT_CODEX_AGENTAPI_URL}"`);
-    console.log(`   $env:WEIXIN_CLAUDE_AGENTAPI_URL="${DEFAULT_CLAUDE_AGENTAPI_URL}"`);
-  } else {
-    console.log(`   export WEIXIN_CODEX_AGENTAPI_URL="${DEFAULT_CODEX_AGENTAPI_URL}"`);
-    console.log(`   export WEIXIN_CLAUDE_AGENTAPI_URL="${DEFAULT_CLAUDE_AGENTAPI_URL}"`);
-  }
-  console.log();
-  console.log("4. 在微信里切换后端");
+  console.log("1. 直接在微信里切换后端");
   console.log("   /codex");
   console.log("   /claude");
   console.log("   /openclaw");
+  console.log();
+  console.log("   默认会连接本地 AgentAPI：Codex 3284，Claude 3285；没拉起时会自动尝试启动。");
+  console.log("   前提是本机 `agentapi`、`codex`、`claude` 命令可用且已登录。");
+  console.log();
+  console.log("2. 只有在你需要改远端地址或非默认端口时，才设置环境变量");
+  if (isWindows()) {
+    console.log(`   $env:WEIXIN_CODEX_AGENTAPI_URL=\"${DEFAULT_CODEX_AGENTAPI_URL}\"`);
+    console.log(`   $env:WEIXIN_CLAUDE_AGENTAPI_URL=\"${DEFAULT_CLAUDE_AGENTAPI_URL}\"`);
+  } else {
+    console.log(`   export WEIXIN_CODEX_AGENTAPI_URL=\"${DEFAULT_CODEX_AGENTAPI_URL}\"`);
+    console.log(`   export WEIXIN_CLAUDE_AGENTAPI_URL=\"${DEFAULT_CLAUDE_AGENTAPI_URL}\"`);
+  }
   console.log();
 }
 

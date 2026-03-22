@@ -1,6 +1,10 @@
 # 微信多后端接入插件
 
-这是一个基于腾讯微信通道实现演进而来的项目。
+> 本项目目前仍处于早期版本，体验上可能还有一些问题。后续会持续迭代和优化，提供更顺畅的微信接入 Codex、Claude Code 等能力。
+>
+> 当前问题：Codex、Claude Code 在输出内容时，可能存在排版较乱的情况，后续会优化处理。
+
+这是一个基于腾讯微信通道实现演进而来的项目。本项目的OpenClaw接入方案与腾讯官方保持一致，可放心使用。
 
 当前项目仍然以 **OpenClaw 微信插件** 形态运行，但已经开始支持“一个微信入口，对接多个后端”：
 
@@ -8,13 +12,18 @@
 - `codex`
 - `claude`
 
+### 样例展示
+
+| 样例 1 | 样例 2 |
+| --- | --- |
+| ![样例 1](docs/img/1.jpg) | ![样例 2](docs/img/2.jpg) |
 
 
 ## 当前状态
 
-目前它还不是完全脱离 OpenClaw 的独立服务，但切换后端并不依赖OpenClaw，不会消耗Token。
+目前它还不是一个完全脱离 OpenClaw 的独立服务，但在切换后端时已经不再依赖 OpenClaw，也不会消耗 OpenClaw Token。
 
-后续将实现不依赖OpenClaw的运行、在微信上接入OpenClaw、Codex、Claude Code 、OpenCode 等。
+后续将逐步实现脱离 OpenClaw 的独立运行，并在微信侧接入 OpenClaw、Codex、Claude Code、OpenCode 等更多后端。
 
 当前运行方式：
 
@@ -25,33 +34,31 @@
   -> openclaw / codex / claude
 ```
 
-## 安装前提
 
-你需要先准备以下环境：
 
-### 1. OpenClaw
+## 开发计划
+
+- [ ] 支持独立运行；当 OpenClaw 未启动或异常退出时，可借助其他编程工具拉起 OpenClaw
+- [ ] 补充更多 Codex / Claude Code 原生命令，提供更顺滑的接入体验
+- [ ] 新建会话
+- [ ] 支持更多编程工具后端
+- [ ] 连续输出的形式显示思考过程
+
+
+
+
+
+## 安装插件
 
 需要本机已经安装 OpenClaw，并且 `openclaw` 命令可用。
 
-### 2. AgentAPI
+如果你要使用 `codex` / `claude`：
 
-如果你要使用：
-
-- `/codex`
-- `/claude`
-
-则需要在本机或可访问的机器上启动对应的 AgentAPI 服务。
-
-### 3. 已登录的底层 agent
-
-如果你要使用 Codex / Claude Code，需要保证：
-
-- Codex 已经在目标机器上登录
-- Claude Code 已经在目标机器上登录
+- 安装器会自动安装 `agentapi`（如果本机缺失）
+- 插件会优先按本地默认地址自动探测并尝试拉起 AgentAPI
+- 但 `codex` / `claude` 本身仍需要先登录可用
 
 AgentAPI 只是远程控制层，不负责登录。
-
-## 安装插件
 
 ### 一键安装
 
@@ -62,7 +69,7 @@ npx -y @bytepioneer-ai/weixin-agent-gateway-cli install
 安装器会自动：
 
 - 安装或更新本插件
-- 尝试禁用官方 `openclaw-weixin` 插件
+- 尝试禁用官方 `openclaw-weixin` 插件（）
 - 启用本插件
 - 触发微信扫码登录
 - 下载 AgentAPI（如果本机未安装）
@@ -96,57 +103,50 @@ openclaw channels login --channel weixin-agent-gateway
 openclaw gateway restart
 ```
 
-## 启动 AgentAPI
+## 发布 npm
 
-如果你只用 OpenClaw backend，可以跳过本节。
+当前仓库里有两个独立 npm 包：
 
-如果你要用 `codex` / `claude`，需要分别启动对应的 AgentAPI。
+- `@bytepioneer-ai/weixin-agent-gateway`
+- `@bytepioneer-ai/weixin-agent-gateway-cli`
 
-### 启动 Codex AgentAPI
+它们可以放在同一个仓库里统一维护，但不建议合成一个包。
+
+原因是：
+
+- 本体是 OpenClaw 插件包
+- CLI 是安装和初始化工具
+- 两者职责不同，版本节奏也可能不同
+
+发布前先执行：
 
 ```bash
-agentapi server --type=codex -- codex
+npm login
 ```
 
-### 启动 Claude Code AgentAPI
+根目录已经提供统一发布脚本：
 
 ```bash
-agentapi server -- claude
+npm run publish:npm:dry-run
+npm run publish:npm
+npm run publish:npm:plugin
+npm run publish:npm:cli
 ```
 
-通常建议分别起两个端口，例如：
+默认会按 `plugin -> cli` 的顺序发布，并使用 public access。
 
-- Codex: `http://127.0.0.1:3284`
-- Claude: `http://127.0.0.1:3285`
+发布脚本默认会附带 `--ignore-scripts`。
 
-## 配置 AgentAPI 地址
+如果需要带 tag 或 OTP，可以直接调用脚本：
 
-当前项目通过环境变量读取 AgentAPI 地址。
-
-### Codex
-
-读取以下任一环境变量：
-
-- `WEIXIN_CODEX_AGENTAPI_URL`
-- `CODEX_AGENTAPI_URL`
-
-示例：
-
-```powershell
-$env:WEIXIN_CODEX_AGENTAPI_URL="http://127.0.0.1:3284"
+```bash
+node ./scripts/publish-npm.mjs all --tag next --otp 123456
 ```
 
-### Claude Code
+如果你需要显式执行 npm lifecycle scripts，可以追加：
 
-读取以下任一环境变量：
-
-- `WEIXIN_CLAUDE_AGENTAPI_URL`
-- `CLAUDE_AGENTAPI_URL`
-
-示例：
-
-```powershell
-$env:WEIXIN_CLAUDE_AGENTAPI_URL="http://127.0.0.1:3285"
+```bash
+node ./scripts/publish-npm.mjs all --with-scripts
 ```
 
 ## 使用方法
@@ -167,127 +167,3 @@ $env:WEIXIN_CLAUDE_AGENTAPI_URL="http://127.0.0.1:3285"
 /backend
 ```
 
-### 当前实现说明
-
-- `/openclaw`
-  走 OpenClaw 原有复杂链路
-- `/codex`
-  走 AgentAPI lightweight backend
-- `/claude`
-  走 AgentAPI lightweight backend
-
-## 轻量后端能力范围
-
-当前 `codex` / `claude` 后端按 lightweight 模式实现，能力范围是：
-
-- 文本输入
-- 图片输入
-- 文本输出
-- 可选媒体输出
-
-它们 **不复用** OpenClaw 的：
-
-- route
-- session
-- dispatcher
-- command authorization
-
-## 图片输入说明
-
-微信图片会先下载到本地，再作为本地文件路径交给 lightweight backend。
-
-当前对 AgentAPI 的处理方式是：
-
-1. 将图片上传到 AgentAPI
-2. 获取远端 `filePath`
-3. 把 `filePath` 拼进发送给 agent 的 prompt
-
-## 当前限制
-
-### 1. 项目仍然依赖 OpenClaw 插件运行
-
-当前项目还不是完全独立的微信网关服务。
-
-也就是说：
-
-- OpenClaw 不启动时
-- 当前插件整体不会独立运行
-
-### 2. Codex / Claude 输出可能包含过程信息
-
-当前 `codex` / `claude` 通过 AgentAPI 获取结果。  
-AgentAPI 会对 TUI 输出做一层清理，但不保证只留下最终答案。
-
-因此你仍可能看到：
-
-- `• Ran ...`
-- 命令输出块
-- 状态信息
-
-### 3. AgentAPI 地址必须正确配置
-
-如果：
-
-- `WEIXIN_CODEX_AGENTAPI_URL`
-- `WEIXIN_CLAUDE_AGENTAPI_URL`
-
-没有配置，或者配置的地址上没有服务监听，就会连接失败。
-
-## 常见问题
-
-### 1. `/claude` 切换成功，但回复失败
-
-常见原因：
-
-- Claude AgentAPI 没启动
-- Claude AgentAPI 端口配置错误
-
-请检查：
-
-```bash
-curl http://127.0.0.1:3285/status
-```
-
-### 2. `/codex` 或 `/claude` 输出很乱
-
-这是因为当前拿到的是 AgentAPI 清理后的 TUI 消息，而不是纯语义答案。
-
-后续可以继续增加输出清洗逻辑。
-
-### 3. 如何查看当前后端
-
-在微信里发送：
-
-```text
-/backend
-```
-
-## 目录说明
-
-当前代码结构里，和多后端相关的主要目录有：
-
-- `src/backends`
-  后端实现
-- `src/backends/openclaw`
-  OpenClaw backend
-- `src/backends/lightweight`
-  轻量 backend 共用能力
-- `src/backends/codex`
-  Codex backend
-- `src/backends/claude`
-  Claude backend
-- `src/router`
-  会话级 backend 路由
-- `src/transport/weixin`
-  微信 transport 相关能力
-
-## 相关文档
-
-- 架构设计：
-  [docs/weixin-multi-backend-architecture.zh_CN.md](/d:/work/code/openclaw-weixin/docs/weixin-multi-backend-architecture.zh_CN.md)
-
-- 代码分层清单：
-  [docs/code-layer-classification.zh_CN.md](/d:/work/code/openclaw-weixin/docs/code-layer-classification.zh_CN.md)
-
-- 后端接入说明：
-  [src/backends/README.zh_CN.md](/d:/work/code/openclaw-weixin/src/backends/README.zh_CN.md)
