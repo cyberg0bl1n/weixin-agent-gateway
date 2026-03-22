@@ -158,6 +158,7 @@ function resolveAgentApiExecutable(): string | undefined {
 }
 
 function resolveAgentCommand(backendId: AgentApiAutoStartBackendId): string {
+  const raw = (() => {
   switch (backendId) {
     case "codex":
       return process.env.WEIXIN_CODEX_BIN?.trim() || process.env.CODEX_BIN?.trim() || "codex";
@@ -172,6 +173,8 @@ function resolveAgentCommand(backendId: AgentApiAutoStartBackendId): string {
     case "cursor":
       return process.env.WEIXIN_CURSOR_BIN?.trim() || process.env.CURSOR_BIN?.trim() || "cursor-agent";
   }
+  })();
+  return resolveCommandPath(raw) ?? raw;
 }
 
 function resolveBackendLabel(backendId: AgentApiAutoStartBackendId): string {
@@ -265,11 +268,13 @@ async function spawnDetached(agentapiBin: string, args: string[]): Promise<void>
     const child = spawn(agentapiBin, args, {
       detached: true,
       shell: false,
-      stdio: "ignore",
+      // AgentAPI reads stdin during startup; a closed fd makes it exit immediately on Linux.
+      stdio: ["pipe", "ignore", "ignore"],
       windowsHide: true,
     });
     child.once("error", reject);
     child.once("spawn", () => {
+      child.stdin?.end();
       child.unref();
       resolve();
     });
