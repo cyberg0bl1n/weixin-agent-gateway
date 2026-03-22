@@ -13,12 +13,12 @@ export type AgentApiAutoStartBackendId =
   | "auggie"
   | "cursor";
 
-export const DEFAULT_CODEX_AGENTAPI_URL = "http://127.0.0.1:3284";
-export const DEFAULT_CLAUDE_AGENTAPI_URL = "http://127.0.0.1:3285";
-export const DEFAULT_OPENCODE_AGENTAPI_URL = "http://127.0.0.1:3286";
-export const DEFAULT_COPILOT_AGENTAPI_URL = "http://127.0.0.1:3287";
-export const DEFAULT_AUGGIE_AGENTAPI_URL = "http://127.0.0.1:3288";
-export const DEFAULT_CURSOR_AGENTAPI_URL = "http://127.0.0.1:3289";
+export const DEFAULT_CODEX_AGENTAPI_URL = "http://localhost:3284";
+export const DEFAULT_CLAUDE_AGENTAPI_URL = "http://localhost:3285";
+export const DEFAULT_OPENCODE_AGENTAPI_URL = "http://localhost:3286";
+export const DEFAULT_COPILOT_AGENTAPI_URL = "http://localhost:3287";
+export const DEFAULT_AUGGIE_AGENTAPI_URL = "http://localhost:3288";
+export const DEFAULT_CURSOR_AGENTAPI_URL = "http://localhost:3289";
 
 type EnsureAgentApiRunningOptions = {
   backendId: AgentApiAutoStartBackendId;
@@ -219,7 +219,13 @@ function buildLaunchArgs(
   port: number,
   agentCommand: string,
 ): string[] {
-  const args = ["server", "--port", String(port)];
+  const args = [
+    "server",
+    "--port",
+    String(port),
+    "--allowed-hosts",
+    "localhost,127.0.0.1",
+  ];
   const agentType = resolveAgentApiType(backendId);
   if (agentType) {
     args.push(`--type=${agentType}`);

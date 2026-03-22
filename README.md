@@ -62,12 +62,12 @@ AgentAPI 只是远程控制层，不负责登录。
 
 当前默认本地地址：
 
-- `codex`: `http://127.0.0.1:3284`
-- `claude`: `http://127.0.0.1:3285`
-- `opencode`: `http://127.0.0.1:3286`
-- `copilot`: `http://127.0.0.1:3287`
-- `auggie`: `http://127.0.0.1:3288`
-- `cursor`: `http://127.0.0.1:3289`
+- `codex`: `http://localhost:3284`
+- `claude`: `http://localhost:3285`
+- `opencode`: `http://localhost:3286`
+- `copilot`: `http://localhost:3287`
+- `auggie`: `http://localhost:3288`
+- `cursor`: `http://localhost:3289`
 
 ### 一键安装
 

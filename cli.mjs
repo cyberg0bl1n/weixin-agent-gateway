@@ -14,12 +14,12 @@ const PLUGIN_ENTRY_ID = process.env.WEIXIN_GATEWAY_PLUGIN_ID?.trim() || "weixin-
 const OFFICIAL_PLUGIN_ENTRY_ID = "openclaw-weixin";
 const ENABLE_OFFICIAL_PLUGIN_CMD = "openclaw config set plugins.entries.openclaw-weixin.enabled true";
 const AGENTAPI_VERSION = process.env.AGENTAPI_VERSION?.trim() || "latest";
-const DEFAULT_CODEX_AGENTAPI_URL = "http://127.0.0.1:3284";
-const DEFAULT_CLAUDE_AGENTAPI_URL = "http://127.0.0.1:3285";
-const DEFAULT_OPENCODE_AGENTAPI_URL = "http://127.0.0.1:3286";
-const DEFAULT_COPILOT_AGENTAPI_URL = "http://127.0.0.1:3287";
-const DEFAULT_AUGGIE_AGENTAPI_URL = "http://127.0.0.1:3288";
-const DEFAULT_CURSOR_AGENTAPI_URL = "http://127.0.0.1:3289";
+const DEFAULT_CODEX_AGENTAPI_URL = "http://localhost:3284";
+const DEFAULT_CLAUDE_AGENTAPI_URL = "http://localhost:3285";
+const DEFAULT_OPENCODE_AGENTAPI_URL = "http://localhost:3286";
+const DEFAULT_COPILOT_AGENTAPI_URL = "http://localhost:3287";
+const DEFAULT_AUGGIE_AGENTAPI_URL = "http://localhost:3288";
+const DEFAULT_CURSOR_AGENTAPI_URL = "http://localhost:3289";
 
 function log(msg) {
   console.log(`\x1b[36m[weixin-agent-gateway]\x1b[0m ${msg}`);
@@ -111,6 +111,74 @@ async function downloadToFile(url, filePath) {
   fs.writeFileSync(filePath, Buffer.from(arr));
 }
 
+function collectErrorTexts(err) {
+  const texts = [];
+  let current = err;
+  while (current) {
+    if (current instanceof Error) {
+      if (current.message) texts.push(current.message);
+      current = current.cause;
+      continue;
+    }
+    if (typeof current === "object" && current && "message" in current) {
+      const message = current.message;
+      if (typeof message === "string" && message) {
+        texts.push(message);
+      }
+      current = "cause" in current ? current.cause : undefined;
+      continue;
+    }
+    break;
+  }
+  return texts;
+}
+
+function isAgentApiDownloadNetworkError(err) {
+  const joined = collectErrorTexts(err).join("\n").toLowerCase();
+  return [
+    "fetch failed",
+    "connect timeout",
+    "timed out",
+    "econnreset",
+    "enotfound",
+    "eai_again",
+    "und_err_connect_timeout",
+    "github.com:443",
+  ].some((token) => joined.includes(token));
+}
+
+function printManualAgentApiInstallHelp({ downloadUrl, targetPath }) {
+  const binDir = resolveUserBinDir();
+  console.log();
+  warn("自动下载 AgentAPI 失败，当前机器可能无法直接访问 GitHub。");
+  console.log("你可以手动下载安装 AgentAPI：");
+  console.log(`  下载地址: ${downloadUrl}`);
+  console.log(`  建议安装路径: ${targetPath}`);
+  console.log();
+  if (isWindows()) {
+    console.log("Windows 示例：");
+    console.log(`  1. 下载后重命名为 agentapi.exe`);
+    console.log(`  2. 放到 ${binDir}`);
+    console.log(`  3. 确保 ${binDir} 在 PATH 中`);
+  } else {
+    console.log("Linux/macOS 示例：");
+    console.log(`  mkdir -p "${binDir}"`);
+    console.log(`  cp /path/to/agentapi "${targetPath}"`);
+    console.log(`  chmod +x "${targetPath}"`);
+    console.log(`  export PATH="${binDir}:$PATH"`);
+  }
+  console.log();
+  console.log("安装完成后，可重新执行：");
+  console.log("  openclaw gateway restart");
+  console.log("或在启动前显式指定：");
+  if (isWindows()) {
+    console.log(`  $env:WEIXIN_AGENTAPI_BIN="${targetPath}"`);
+  } else {
+    console.log(`  export WEIXIN_AGENTAPI_BIN="${targetPath}"`);
+  }
+  console.log();
+}
+
 async function ensureAgentApiInstalled() {
   if (commandExists("agentapi")) {
     log("已检测到 agentapi");
@@ -123,7 +191,15 @@ async function ensureAgentApiInstalled() {
   const binDir = resolveUserBinDir();
   const targetPath = path.join(binDir, isWindows() ? "agentapi.exe" : "agentapi");
 
-  await downloadToFile(downloadUrl, targetPath);
+  try {
+    await downloadToFile(downloadUrl, targetPath);
+  } catch (err) {
+    if (isAgentApiDownloadNetworkError(err)) {
+      printManualAgentApiInstallHelp({ downloadUrl, targetPath });
+      return { installed: false, targetPath, manualInstallRequired: true };
+    }
+    throw err;
+  }
   if (!isWindows()) {
     chmodSync(targetPath, 0o755);
   }
@@ -238,6 +314,11 @@ function printNextSteps(agentapiInfo) {
   console.log();
   if (agentapiInfo?.installed) {
     console.log(`AgentAPI 已下载到: ${agentapiInfo.targetPath}`);
+    console.log();
+  }
+  if (agentapiInfo?.manualInstallRequired) {
+    console.log("AgentAPI 尚未自动安装完成。");
+    console.log("完成手动安装后，再执行一次 `openclaw gateway restart` 即可。");
     console.log();
   }
   console.log("1. 直接在微信里切换后端");
