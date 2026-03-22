@@ -1,0 +1,9 @@
+{
+  "id": "weixin-agent-gateway",
+  "channels": ["weixin-agent-gateway"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}
