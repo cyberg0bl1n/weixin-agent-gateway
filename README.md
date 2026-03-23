@@ -47,60 +47,6 @@
 - [ ] 支持更多编程工具后端
 - [ ] 连续输出的形式显示思考过程
 
-## 安装插件
-
-需要本机已经安装 OpenClaw，并且 `openclaw` 命令可用。
-
-如果你要使用 `codex`：
-
-- 需要本机已安装并登录 `codex`
-- 安装器会自动尝试安装 `@zed-industries/codex-acp`；如果失败，再按下面步骤手动补装
-- `codex` backend 当前直接通过 ACP 连接，不经过 AgentAPI
-- Codex 只会把 ACP 中 Codex 自己产出的描述性内容和正文段落拆成多个微信气泡发送，不会把工具调用手工转换成人话
-- 如果 `codex-acp` 不在 `PATH` 中，可以显式设置 `WEIXIN_CODEX_ACP_BIN`
-- 如果需要显式指定 Codex 会话工作目录，可以设置 `WEIXIN_CODEX_ACP_CWD`
-- 当前第一版 ACP 仍默认自动批准 Codex 的工具权限请求；如需关闭，可设置 `WEIXIN_CODEX_ACP_PERMISSION_MODE=cancel`
-
-首次使用 `codex` 前，建议先在你准备运行 `openclaw gateway` 的工作目录里手动执行一次 `codex`，完成登录确认流程。
-
-例如：
-
-```bash
-cd /path/to/workdir
-codex
-```
-
-如果你要使用 `claude`：
-
-- 需要本机已安装并登录 `claude`
-- 安装器会自动尝试安装 `@zed-industries/claude-agent-acp`；如果失败，再按下面步骤手动补装
-- `claude` backend 当前直接通过 ACP 连接，不经过 AgentAPI
-- Claude Code 只会把 ACP 中 Claude 自己产出的描述性内容和正文段落拆成多个微信气泡发送，不会把工具调用手工转换成人话
-- 如果 `claude-agent-acp` 不在 `PATH` 中，可以显式设置 `WEIXIN_CLAUDE_ACP_BIN`
-- 如果需要显式指定 Claude Code 会话工作目录，可以设置 `WEIXIN_CLAUDE_ACP_CWD`
-- 当前第一版 ACP 仍默认自动批准 Claude Code 的工具权限请求；如需关闭，可设置 `WEIXIN_CLAUDE_ACP_PERMISSION_MODE=cancel`
-
-当前真正可用的 backend：
-
-- `openclaw`
-- `codex`
-- `claude`
-
-`opencode`、`copilot`、`auggie`、`cursor` 当前仍只保留 backend id 和命令入口，后续将按 ACP 方式逐步接入。
-
-首次使用 `claude` 前，还需要先在你准备运行 `openclaw gateway` 的工作目录里手动执行一次 `claude`，完成 Claude Code 的首次安全确认流程。
-
-这是因为 Claude Code 会按工作目录记录这次确认；如果没有先确认，Claude ACP 首次启动时仍可能卡在 trust 确认页，表现为微信侧调用超时。
-
-例如，如果你准备在 `/path/to/workdir` 下启动 OpenClaw：
-
-```bash
-cd /path/to/workdir
-claude
-```
-
-进入 Claude Code 后，先完成一次确认，然后再启动或重启 `openclaw gateway`。
-
 ### 一键安装
 
 ```bash
@@ -171,22 +117,10 @@ Codex:
 npm install -g @zed-industries/codex-acp
 ```
 
-如果 `codex-acp` 不在 `PATH` 中，可以设置：
-
-```bash
-export WEIXIN_CODEX_ACP_BIN="codex-acp"
-```
-
 Claude:
 
 ```bash
 npm install -g @zed-industries/claude-agent-acp
-```
-
-如果 `claude-agent-acp` 不在 `PATH` 中，可以设置：
-
-```bash
-export WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"
 ```
 
 ## 使用方法
