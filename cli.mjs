@@ -1,15 +1,69 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const PACKAGE_NAME = "@bytepioneer-ai/weixin-agent-gateway";
-const PLUGIN_SPEC = process.env.WEIXIN_GATEWAY_PLUGIN_SPEC?.trim() || PACKAGE_NAME;
+const PACKAGE_ROOT = path.dirname(fileURLToPath(import.meta.url));
+const DEFAULT_PLUGIN_SPEC = process.env.WEIXIN_GATEWAY_PLUGIN_SPEC?.trim() || PACKAGE_NAME;
 const CHANNEL_ID = process.env.WEIXIN_GATEWAY_CHANNEL_ID?.trim() || "weixin-agent-gateway";
 const PLUGIN_ENTRY_ID = process.env.WEIXIN_GATEWAY_PLUGIN_ID?.trim() || "weixin-agent-gateway";
 const OFFICIAL_PLUGIN_ENTRY_ID = "openclaw-weixin";
 const ENABLE_OFFICIAL_PLUGIN_CMD = "openclaw config set plugins.entries.openclaw-weixin.enabled true";
 const CODEX_ACP_NPM_PACKAGE = "@zed-industries/codex-acp";
 const CLAUDE_ACP_NPM_PACKAGE = "@zed-industries/claude-agent-acp";
+const LIGHTWEIGHT_BACKEND_CLI_CHECKS = [
+  {
+    id: "qoder",
+    label: "Qoder CLI",
+    binName: "qodercli",
+    envVarName: "WEIXIN_QODER_ACP_BIN",
+    loginHint: "先执行 qodercli，并在会话里完成 /login，或设置 QODER_PERSONAL_ACCESS_TOKEN。",
+  },
+  {
+    id: "qwen",
+    label: "Qwen Code",
+    binName: "qwen",
+    envVarName: "WEIXIN_QWEN_ACP_BIN",
+    loginHint: "先执行 qwen 完成登录。",
+  },
+  {
+    id: "kimi",
+    label: "Kimi CLI",
+    binName: "kimi",
+    envVarName: "WEIXIN_KIMI_ACP_BIN",
+    loginHint: "先执行 kimi，并在会话里完成 /login。",
+  },
+  {
+    id: "opencode",
+    label: "OpenCode",
+    binName: "opencode",
+    envVarName: "WEIXIN_OPENCODE_ACP_BIN",
+    loginHint: "先执行 opencode auth login，或手动启动一次 opencode 完成初始化。",
+  },
+  {
+    id: "copilot",
+    label: "GitHub Copilot",
+    binName: "copilot",
+    envVarName: "WEIXIN_COPILOT_ACP_BIN",
+    loginHint: "先执行 copilot login，或配置 GH_TOKEN/GITHUB_TOKEN。",
+  },
+  {
+    id: "auggie",
+    label: "Auggie",
+    binName: "auggie",
+    envVarName: "WEIXIN_AUGGIE_ACP_BIN",
+    loginHint: "先执行 auggie login。",
+  },
+  {
+    id: "cursor",
+    label: "Cursor CLI",
+    binName: "cursor-agent",
+    envVarName: "WEIXIN_CURSOR_ACP_BIN",
+    loginHint: "先执行 cursor-agent login，或设置 CURSOR_API_KEY。",
+  },
+];
 
 function log(msg) {
   console.log(`\x1b[36m[weixin-agent-gateway]\x1b[0m ${msg}`);
@@ -27,9 +81,9 @@ function isWindows() {
   return process.platform === "win32";
 }
 
-function run(cmd, { silent = true } = {}) {
+function run(cmd, { silent = true, cwd } = {}) {
   const stdio = silent ? ["pipe", "pipe", "pipe"] : "inherit";
-  const result = spawnSync(cmd, { shell: true, stdio });
+  const result = spawnSync(cmd, { shell: true, stdio, cwd });
   if (result.status !== 0) {
     const err = new Error(`Command failed with exit code ${result.status}: ${cmd}`);
     err.stderr = silent ? (result.stderr || "").toString() : "";
@@ -124,6 +178,21 @@ async function ensureCodexAcpInstalled() {
   });
 }
 
+function inspectCliAvailability({ label, binName, envVarName, loginHint }) {
+  const configuredPath = process.env[envVarName]?.trim();
+  const resolvedBin = configuredPath || binName;
+  const available = commandExists(resolvedBin);
+  return {
+    label,
+    binName,
+    envVarName,
+    resolvedBin,
+    available,
+    loginHint,
+    configuredPath,
+  };
+}
+
 function ensureOpenClawInstalled() {
   if (!commandExists("openclaw")) {
     error("未找到 openclaw，请先安装 OpenClaw。");
@@ -134,30 +203,52 @@ function ensureOpenClawInstalled() {
   log("已找到本地安装的 openclaw");
 }
 
-function installPlugin() {
-  log("正在安装插件...");
+function installPlugin(pluginSpec, { localSource = false } = {}) {
+  log(`正在安装插件${localSource ? "（本地源码）" : ""}...`);
   try {
-    const installOut = run(`openclaw plugins install "${PLUGIN_SPEC}"`);
+    const installOut = localSource
+      ? run("openclaw plugins install -l .", { cwd: pluginSpec })
+      : run(`openclaw plugins install "${pluginSpec}"`);
     if (installOut) log(installOut);
   } catch (installErr) {
     if (installErr.stderr && installErr.stderr.includes("already exists")) {
-      log("检测到本地已安装，尝试更新插件...");
+      if (localSource) {
+        warn("检测到插件已存在，正在尝试更新现有插件。");
+        warn("如果当前安装来源不是本地源码，更新后仍可能继续指向旧来源；必要时请先手动卸载旧插件，再重新执行 install-local。");
+      } else {
+        log("检测到本地已安装，尝试更新插件...");
+      }
       try {
         const updateOut = run(`openclaw plugins update "${PLUGIN_ENTRY_ID}"`);
         if (updateOut) log(updateOut);
       } catch (updateErr) {
         error("插件更新失败，请手动执行：");
         if (updateErr.stderr) console.error(updateErr.stderr);
-        console.log(`  openclaw plugins update "${PLUGIN_ENTRY_ID}"`);
+        if (localSource) {
+          console.log(`  cd "${pluginSpec}"`);
+          console.log("  openclaw plugins install -l .");
+        } else {
+          console.log(`  openclaw plugins update "${PLUGIN_ENTRY_ID}"`);
+        }
         process.exit(1);
       }
     } else {
       error("插件安装失败，请手动执行：");
       if (installErr.stderr) console.error(installErr.stderr);
-      console.log(`  openclaw plugins install "${PLUGIN_SPEC}"`);
+      if (localSource) {
+        console.log(`  cd "${pluginSpec}"`);
+        console.log("  openclaw plugins install -l .");
+      } else {
+        console.log(`  openclaw plugins install "${pluginSpec}"`);
+      }
       process.exit(1);
     }
   }
+}
+
+function resolveLocalPluginSpec(rawPath) {
+  if (!rawPath?.trim()) return PACKAGE_ROOT;
+  return path.resolve(process.cwd(), rawPath.trim());
 }
 
 function enablePlugin() {
@@ -215,7 +306,20 @@ function restartGateway() {
   }
 }
 
-function printNextSteps(codexAcpInfo, claudeAcpInfo) {
+function printCliAvailabilityStatus(cliStatuses) {
+  console.log("2. 其他已接入 lightweight backend 的本地 CLI 检查");
+  cliStatuses.forEach((status) => {
+    const state = status.available ? "已检测到" : "未检测到";
+    console.log(`   - ${status.label}: ${state} (${status.resolvedBin})`);
+    if (!status.available) {
+      console.log(`     请先安装对应 CLI，或设置 ${status.envVarName}。`);
+    }
+    console.log(`     ${status.loginHint}`);
+  });
+  console.log();
+}
+
+function printNextSteps(codexAcpInfo, claudeAcpInfo, cliStatuses) {
   console.log();
   log("安装完成。下一步建议：");
   console.log();
@@ -240,38 +344,62 @@ function printNextSteps(codexAcpInfo, claudeAcpInfo) {
   console.log("1. 直接在微信里切换后端");
   console.log("   /codex");
   console.log("   /claude");
+  console.log("   /qoder");
+  console.log("   /qwen");
+  console.log("   /kimi");
+  console.log("   /opencode");
+  console.log("   /copilot");
+  console.log("   /auggie");
+  console.log("   /cursor");
   console.log("   /openclaw");
   console.log();
-  console.log("   当前真正可用的非 OpenClaw 后端是 Codex 和 Claude Code。");
-  console.log("   其他预留后端（opencode / copilot / auggie / cursor）当前尚未接入。");
   console.log("   Codex 现在走 direct ACP：需要本机 `codex` 与 `codex-acp` 可用，并先在目标工作目录手动执行一次 `codex` 完成登录。");
   console.log("   Claude Code 现在走 direct ACP：需要本机 `claude` 与 `claude-agent-acp` 可用，并先在目标工作目录手动执行一次 `claude` 完成 trust。");
   console.log();
-  console.log("2. 只有在你需要显式指定 ACP 命令或工作目录时，才设置环境变量");
+  printCliAvailabilityStatus(cliStatuses);
+  console.log("3. 只有在你需要显式指定 ACP 命令或工作目录时，才设置环境变量");
   if (isWindows()) {
-    console.log(`   $env:WEIXIN_CODEX_ACP_BIN="codex-acp"`);
-    console.log('   $env:WEIXIN_CODEX_ACP_CWD="D:\\your\\project"');
-    console.log(`   $env:WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"`);
-    console.log('   $env:WEIXIN_CLAUDE_ACP_CWD="D:\\your\\project"');
+     console.log(`   $env:WEIXIN_CODEX_ACP_BIN="codex-acp"`);
+     console.log('   $env:WEIXIN_CODEX_ACP_CWD="D:\\your\\project"');
+     console.log(`   $env:WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"`);
+     console.log('   $env:WEIXIN_CLAUDE_ACP_CWD="D:\\your\\project"');
+     console.log(`   $env:WEIXIN_QODER_ACP_BIN="qodercli"`);
+     console.log(`   $env:WEIXIN_QWEN_ACP_BIN="qwen"`);
+     console.log(`   $env:WEIXIN_KIMI_ACP_BIN="kimi"`);
+     console.log(`   $env:WEIXIN_OPENCODE_ACP_BIN="opencode"`);
+     console.log(`   $env:WEIXIN_COPILOT_ACP_BIN="copilot"`);
+     console.log(`   $env:WEIXIN_AUGGIE_ACP_BIN="auggie"`);
+     console.log(`   $env:WEIXIN_CURSOR_ACP_BIN="cursor-agent"`);
   } else {
-    console.log(`   export WEIXIN_CODEX_ACP_BIN="codex-acp"`);
-    console.log('   export WEIXIN_CODEX_ACP_CWD="/path/to/project"');
-    console.log(`   export WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"`);
-    console.log('   export WEIXIN_CLAUDE_ACP_CWD="/path/to/project"');
+     console.log(`   export WEIXIN_CODEX_ACP_BIN="codex-acp"`);
+     console.log('   export WEIXIN_CODEX_ACP_CWD="/path/to/project"');
+     console.log(`   export WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"`);
+     console.log('   export WEIXIN_CLAUDE_ACP_CWD="/path/to/project"');
+     console.log(`   export WEIXIN_QODER_ACP_BIN="qodercli"`);
+     console.log(`   export WEIXIN_QWEN_ACP_BIN="qwen"`);
+     console.log(`   export WEIXIN_KIMI_ACP_BIN="kimi"`);
+     console.log(`   export WEIXIN_OPENCODE_ACP_BIN="opencode"`);
+     console.log(`   export WEIXIN_COPILOT_ACP_BIN="copilot"`);
+     console.log(`   export WEIXIN_AUGGIE_ACP_BIN="auggie"`);
+     console.log(`   export WEIXIN_CURSOR_ACP_BIN="cursor-agent"`);
   }
   console.log();
 }
 
-async function install() {
+async function install({
+  pluginSpec = DEFAULT_PLUGIN_SPEC,
+  localSource = false,
+} = {}) {
   ensureOpenClawInstalled();
-  installPlugin();
+  installPlugin(pluginSpec, { localSource });
   disableOfficialPlugin();
   enablePlugin();
   loginWeixin();
   const codexAcpInfo = await ensureCodexAcpInstalled();
   const claudeAcpInfo = await ensureClaudeAcpInstalled();
+  const cliStatuses = LIGHTWEIGHT_BACKEND_CLI_CHECKS.map(inspectCliAvailability);
   restartGateway();
-  printNextSteps(codexAcpInfo, claudeAcpInfo);
+  printNextSteps(codexAcpInfo, claudeAcpInfo, cliStatuses);
 }
 
 function help() {
@@ -279,16 +407,24 @@ function help() {
 用法: npx -y ${PACKAGE_NAME} <命令>
 
 命令:
-  install   安装插件、启用插件、扫码登录，并安装 Codex / Claude ACP wrapper
-  help      显示帮助信息
+  install                 安装发布版插件、启用插件、扫码登录，安装 Codex / Claude ACP wrapper，并检查其他 backend CLI
+  install-local [path]    安装本地源码目录；默认使用当前仓库目录
+  help                    显示帮助信息
 `);
 }
 
 const command = process.argv[2];
+const commandArg = process.argv[3];
 
 switch (command) {
   case "install":
     await install();
+    break;
+  case "install-local":
+    await install({
+      pluginSpec: resolveLocalPluginSpec(commandArg),
+      localSource: true,
+    });
     break;
   case "help":
   case "--help":

@@ -1,4 +1,4 @@
-﻿# 微信多后端接入插件
+# 微信多后端接入插件
 
 > 本项目目前仍处于早期版本，体验上可能还有一些问题。后续会持续迭代和优化，提供更顺畅的微信接入 Codex、Claude Code、Qoder CLI、Qwen Code、Kimi CLI、OpenCode、GitHub Copilot、Auggie、Cursor CLI 等能力。
 > 本项目由 AgentAPI 方案转入 ACP，连接 Agent 会更加稳定。
@@ -20,9 +20,9 @@
 
 ### 样例展示
 
-| 样例 1 | 样例 2 |
-| --- | --- |
-| <img src="docs/img/1.jpg" alt="样例 1" width="260" /> | <img src="docs/img/2.jpg" alt="样例 2" width="260" /> |
+| 样例 1 | 样例 2 | 样例 3 |
+| --- | --- | --- |
+| <img src="docs/img/c9f46ebb80a40c142270256612424602.jpg" alt="样例 1" width="310" /> | <img src="docs/img/980b6fc4d241810291940da065995936.jpg" alt="样例 2" width="310" /> | <img src="docs/img/d5f745757c073a962f9a663d4ab11128.jpg" alt="样例 3" width="310" /> |
 
 ## 当前状态
 
@@ -64,6 +64,20 @@ npx -y @bytepioneer-ai/weixin-agent-gateway install
 当前一键安装主要覆盖插件本体、微信登录，以及 `codex` / `claude` 的 wrapper 安装。
 `qoder` / `qwen` / `kimi` / `opencode` / `copilot` / `auggie` / `cursor` 仍建议按下面步骤手动安装对应 CLI。
 
+### 本地源码安装
+
+```bash
+git clone https://github.com/BytePioneer-AI/weixin-agent-gateway.git
+cd weixin-agent-gateway
+npm run local:setup
+```
+
+底层等价于在源码目录执行：
+
+```bash
+openclaw plugins install -l .
+```
+
 ### 手动安装
 
 #### 1. 安装插件
@@ -73,6 +87,8 @@ openclaw plugins install "@bytepioneer-ai/weixin-agent-gateway"
 ```
 
 #### 2. 启用插件
+
+> 如果之前安装了微信的 openclaw-weixin，需要禁用，否则会出现 OpenClaw 的重复安装
 
 ```bash
 openclaw config set plugins.entries.openclaw-weixin.enabled false
@@ -93,60 +109,6 @@ openclaw channels login --channel weixin-agent-gateway
 openclaw gateway restart
 ```
 
-#### 5. 安装对应 ACP 命令
-
-Codex:
-
-```bash
-npm install -g @zed-industries/codex-acp
-```
-
-Claude Code:
-
-```bash
-npm install -g @zed-industries/claude-agent-acp
-```
-
-Qoder CLI:
-
-请先按 Qoder CLI 官方 Quick Start 安装 `qodercli` 命令。
-
-Qwen Code:
-
-```bash
-npm install -g @qwen-code/qwen-code
-```
-
-Kimi CLI:
-
-请先按 Kimi Code CLI 官方 Getting Started 安装 `kimi` 命令。
-
-OpenCode:
-
-```bash
-npm install -g opencode-ai
-```
-
-Auggie:
-
-```bash
-npm install -g @augmentcode/auggie
-```
-
-GitHub Copilot:
-
-```bash
-npm install -g @github/copilot
-```
-
-Cursor CLI:
-
-请先安装 Cursor CLI。如果你的环境里 ACP 入口命令不是默认的 `cursor-agent`，可以设置：
-
-```bash
-export WEIXIN_CURSOR_ACP_BIN="agent"
-```
-
 ## Backend 登录准备
 
 首次使用前，建议先在你准备运行 `openclaw gateway` 的工作目录里手动执行对应命令，完成登录或信任确认流程。
@@ -160,56 +122,6 @@ export WEIXIN_CURSOR_ACP_BIN="agent"
 - `copilot`: 先执行一次 `copilot login`
 - `auggie`: 先执行一次 `auggie login`
 - `cursor`: 先执行一次 `cursor-agent login`，或设置 `CURSOR_API_KEY`
-
-## 可选环境变量
-
-如果命令不在 `PATH` 中，可以显式设置可执行文件路径：
-
-```bash
-export WEIXIN_CODEX_ACP_BIN="codex-acp"
-export WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"
-export WEIXIN_QODER_ACP_BIN="qodercli"
-export WEIXIN_QWEN_ACP_BIN="qwen"
-export WEIXIN_KIMI_ACP_BIN="kimi"
-export WEIXIN_OPENCODE_ACP_BIN="opencode"
-export WEIXIN_COPILOT_ACP_BIN="copilot"
-export WEIXIN_AUGGIE_ACP_BIN="auggie"
-export WEIXIN_CURSOR_ACP_BIN="cursor-agent"
-```
-
-这些 lightweight ACP backend 也支持覆盖启动参数与工作目录：
-
-```bash
-export WEIXIN_OPENCODE_ACP_ARGS="acp"
-export WEIXIN_COPILOT_ACP_ARGS="--acp --stdio"
-export WEIXIN_AUGGIE_ACP_ARGS="--acp"
-export WEIXIN_CURSOR_ACP_ARGS="acp"
-export WEIXIN_QODER_ACP_ARGS="--acp"
-export WEIXIN_QWEN_ACP_ARGS="--acp"
-export WEIXIN_KIMI_ACP_ARGS="acp"
-
-export WEIXIN_OPENCODE_ACP_CWD="/path/to/workdir"
-export WEIXIN_COPILOT_ACP_CWD="/path/to/workdir"
-export WEIXIN_AUGGIE_ACP_CWD="/path/to/workdir"
-export WEIXIN_CURSOR_ACP_CWD="/path/to/workdir"
-export WEIXIN_QODER_ACP_CWD="/path/to/workdir"
-export WEIXIN_QWEN_ACP_CWD="/path/to/workdir"
-export WEIXIN_KIMI_ACP_CWD="/path/to/workdir"
-```
-
-如果需要关闭默认的自动工具权限批准，可以设置：
-
-```bash
-export WEIXIN_CODEX_ACP_PERMISSION_MODE="cancel"
-export WEIXIN_CLAUDE_ACP_PERMISSION_MODE="cancel"
-export WEIXIN_QODER_ACP_PERMISSION_MODE="cancel"
-export WEIXIN_QWEN_ACP_PERMISSION_MODE="cancel"
-export WEIXIN_KIMI_ACP_PERMISSION_MODE="cancel"
-export WEIXIN_OPENCODE_ACP_PERMISSION_MODE="cancel"
-export WEIXIN_COPILOT_ACP_PERMISSION_MODE="cancel"
-export WEIXIN_AUGGIE_ACP_PERMISSION_MODE="cancel"
-export WEIXIN_CURSOR_ACP_PERMISSION_MODE="cancel"
-```
 
 ## 使用方法
 
@@ -250,4 +162,4 @@ export WEIXIN_CURSOR_ACP_PERMISSION_MODE="cancel"
 - `@tencent-weixin/openclaw-weixin`，本项目由此改编而来。
 - [`@zed-industries/codex-acp`](https://github.com/zed-industries/codex-acp)，本项目当前通过它接入 Codex。
 - [`Agent Client Protocol`](https://agentclientprotocol.com/) 与 [`@zed-industries/claude-agent-acp`](https://www.npmjs.com/package/@zed-industries/claude-agent-acp)，本项目当前通过它们接入 Claude Code。
-- OpenCode、GitHub Copilot CLI、Auggie CLI、Cursor CLI 的官方 ACP / CLI 能力，为本项目的 lightweight backend 接入提供了基础。
+- OpenCode、GitHub Copilot CLI、Auggie CLI、Cursor CLI 的官方 ACP / CLI 能力，为本项目的 backend 接入提供了基础。

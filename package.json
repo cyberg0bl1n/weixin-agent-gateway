@@ -24,6 +24,8 @@
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
+    "local:setup": "node cli.mjs install-local",
+    "weixin-agent-gateway:setup": "node cli.mjs install-local",
     "prepublishOnly": "npm run typecheck && npm run build",
     "publish:npm": "node ./scripts/publish-npm.mjs"
   },
