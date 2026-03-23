@@ -10,6 +10,12 @@
   轻量 backend，直接通过 ACP 连接 Codex
 - `claude`
   轻量 backend，直接通过 ACP 连接 Claude Code
+- `qoder`
+  轻量 backend，直接通过 ACP 连接 Qoder CLI
+- `qwen`
+  轻量 backend，直接通过 ACP 连接 Qwen Code
+- `kimi`
+  轻量 backend，直接通过 ACP 连接 Kimi CLI
 - `opencode`
   轻量 backend，直接通过 ACP 连接 OpenCode
 - `copilot`
@@ -43,7 +49,7 @@
 
 - [contracts.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/contracts.ts)
 
-当前 `codex` / `claude` / `opencode` / `copilot` / `auggie` / `cursor` backend 主要消费这些字段：
+当前 `codex` / `claude` / `qoder` / `qwen` / `kimi` / `opencode` / `copilot` / `auggie` / `cursor` backend 主要消费这些字段：
 
 - `text`
   用户发来的文本
@@ -78,6 +84,12 @@ export type WeixinLightweightBackendOutput = {
 - [codex/acp-client.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/codex/acp-client.ts)
 - [claude/adapter.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/claude/adapter.ts)
 - [claude/acp-client.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/claude/acp-client.ts)
+- [qoder/adapter.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/qoder/adapter.ts)
+- [qoder/acp-client.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/qoder/acp-client.ts)
+- [qwen/adapter.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/qwen/adapter.ts)
+- [qwen/acp-client.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/qwen/acp-client.ts)
+- [kimi/adapter.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/kimi/adapter.ts)
+- [kimi/acp-client.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/kimi/acp-client.ts)
 - [opencode/adapter.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/opencode/adapter.ts)
 - [opencode/acp-client.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/opencode/acp-client.ts)
 - [copilot/adapter.ts](/d:/Code/test/clawd/weixin-agent-gateway/src/backends/copilot/adapter.ts)
@@ -94,6 +106,12 @@ export type WeixinLightweightBackendOutput = {
   - 通过 `codex-acp` 连接 Codex
 - `claude`
   - 通过 `claude-agent-acp` 连接 Claude Code
+- `qoder`
+  - 通过 `qodercli --acp` 连接 Qoder CLI
+- `qwen`
+  - 通过 `qwen --acp` 连接 Qwen Code
+- `kimi`
+  - 通过 `kimi acp` 连接 Kimi CLI
 - `opencode`
   - 通过 `opencode acp` 连接 OpenCode
 - `copilot`
@@ -120,6 +138,6 @@ export type WeixinLightweightBackendOutput = {
 如果后续要新增 backend，应当继续基于：
 
 - `openclaw` 复杂 backend 模式
-- `codex` / `claude` / `opencode` / `copilot` / `auggie` / `cursor` direct ACP 轻量 backend 模式
+- `codex` / `claude` / `qoder` / `qwen` / `kimi` / `opencode` / `copilot` / `auggie` / `cursor` direct ACP 轻量 backend 模式
 
 继续演进。

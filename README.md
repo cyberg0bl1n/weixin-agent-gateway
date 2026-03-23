@@ -1,6 +1,6 @@
 ﻿# 微信多后端接入插件
 
-> 本项目目前仍处于早期版本，体验上可能还有一些问题。后续会持续迭代和优化，提供更顺畅的微信接入 Codex、Claude Code、OpenCode、GitHub Copilot、Auggie、Cursor CLI 等能力。
+> 本项目目前仍处于早期版本，体验上可能还有一些问题。后续会持续迭代和优化，提供更顺畅的微信接入 Codex、Claude Code、Qoder CLI、Qwen Code、Kimi CLI、OpenCode、GitHub Copilot、Auggie、Cursor CLI 等能力。
 > 本项目由 AgentAPI 方案转入 ACP，连接 Agent 会更加稳定。
 
 这是一个基于腾讯微信插件演进而来的项目，本项目的 OpenClaw 接入方案与腾讯官方保持一致。
@@ -10,6 +10,9 @@
 - `openclaw`
 - `codex`
 - `claude`
+- `qoder`
+- `qwen`
+- `kimi`
 - `opencode`
 - `copilot`
 - `auggie`
@@ -31,7 +34,7 @@
 微信
   -> weixin-agent-gateway 插件
   -> 路由层
-  -> openclaw / codex / claude / opencode / copilot / auggie / cursor
+  -> openclaw / codex / claude / qoder / qwen / kimi / opencode / copilot / auggie / cursor
 ```
 
 ## 开发计划
@@ -59,7 +62,7 @@ npx -y @bytepioneer-ai/weixin-agent-gateway install
 - 尝试安装 Claude ACP wrapper（如果本机未安装）
 
 当前一键安装主要覆盖插件本体、微信登录，以及 `codex` / `claude` 的 wrapper 安装。
-`opencode` / `copilot` / `auggie` / `cursor` 仍建议按下面步骤手动安装对应 CLI。
+`qoder` / `qwen` / `kimi` / `opencode` / `copilot` / `auggie` / `cursor` 仍建议按下面步骤手动安装对应 CLI。
 
 ### 手动安装
 
@@ -104,6 +107,20 @@ Claude Code:
 npm install -g @zed-industries/claude-agent-acp
 ```
 
+Qoder CLI:
+
+请先按 Qoder CLI 官方 Quick Start 安装 `qodercli` 命令。
+
+Qwen Code:
+
+```bash
+npm install -g @qwen-code/qwen-code
+```
+
+Kimi CLI:
+
+请先按 Kimi Code CLI 官方 Getting Started 安装 `kimi` 命令。
+
 OpenCode:
 
 ```bash
@@ -136,6 +153,9 @@ export WEIXIN_CURSOR_ACP_BIN="agent"
 
 - `codex`: 先执行一次 `codex`
 - `claude`: 先执行一次 `claude`
+- `qoder`: 先执行一次 `qodercli`，并在会话里完成 `/login`，或设置 `QODER_PERSONAL_ACCESS_TOKEN`
+- `qwen`: 先执行一次 `qwen`
+- `kimi`: 先执行一次 `kimi`，并在会话里完成 `/login`
 - `opencode`: 先执行一次 `opencode auth login`，或手动启动 `opencode`
 - `copilot`: 先执行一次 `copilot login`
 - `auggie`: 先执行一次 `auggie login`
@@ -148,6 +168,9 @@ export WEIXIN_CURSOR_ACP_BIN="agent"
 ```bash
 export WEIXIN_CODEX_ACP_BIN="codex-acp"
 export WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"
+export WEIXIN_QODER_ACP_BIN="qodercli"
+export WEIXIN_QWEN_ACP_BIN="qwen"
+export WEIXIN_KIMI_ACP_BIN="kimi"
 export WEIXIN_OPENCODE_ACP_BIN="opencode"
 export WEIXIN_COPILOT_ACP_BIN="copilot"
 export WEIXIN_AUGGIE_ACP_BIN="auggie"
@@ -161,11 +184,17 @@ export WEIXIN_OPENCODE_ACP_ARGS="acp"
 export WEIXIN_COPILOT_ACP_ARGS="--acp --stdio"
 export WEIXIN_AUGGIE_ACP_ARGS="--acp"
 export WEIXIN_CURSOR_ACP_ARGS="acp"
+export WEIXIN_QODER_ACP_ARGS="--acp"
+export WEIXIN_QWEN_ACP_ARGS="--acp"
+export WEIXIN_KIMI_ACP_ARGS="acp"
 
 export WEIXIN_OPENCODE_ACP_CWD="/path/to/workdir"
 export WEIXIN_COPILOT_ACP_CWD="/path/to/workdir"
 export WEIXIN_AUGGIE_ACP_CWD="/path/to/workdir"
 export WEIXIN_CURSOR_ACP_CWD="/path/to/workdir"
+export WEIXIN_QODER_ACP_CWD="/path/to/workdir"
+export WEIXIN_QWEN_ACP_CWD="/path/to/workdir"
+export WEIXIN_KIMI_ACP_CWD="/path/to/workdir"
 ```
 
 如果需要关闭默认的自动工具权限批准，可以设置：
@@ -173,6 +202,9 @@ export WEIXIN_CURSOR_ACP_CWD="/path/to/workdir"
 ```bash
 export WEIXIN_CODEX_ACP_PERMISSION_MODE="cancel"
 export WEIXIN_CLAUDE_ACP_PERMISSION_MODE="cancel"
+export WEIXIN_QODER_ACP_PERMISSION_MODE="cancel"
+export WEIXIN_QWEN_ACP_PERMISSION_MODE="cancel"
+export WEIXIN_KIMI_ACP_PERMISSION_MODE="cancel"
 export WEIXIN_OPENCODE_ACP_PERMISSION_MODE="cancel"
 export WEIXIN_COPILOT_ACP_PERMISSION_MODE="cancel"
 export WEIXIN_AUGGIE_ACP_PERMISSION_MODE="cancel"
@@ -189,6 +221,9 @@ export WEIXIN_CURSOR_ACP_PERMISSION_MODE="cancel"
 /openclaw
 /codex
 /claude
+/qoder
+/qwen
+/kimi
 /opencode
 /copilot
 /auggie
@@ -201,6 +236,9 @@ export WEIXIN_CURSOR_ACP_PERMISSION_MODE="cancel"
 /backend
 /backend codex
 /backend claude
+/backend qoder
+/backend qwen
+/backend kimi
 /backend opencode
 /backend copilot
 /backend auggie

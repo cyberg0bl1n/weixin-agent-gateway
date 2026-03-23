@@ -4,6 +4,9 @@ export const WEIXIN_BACKEND_IDS = [
   DEFAULT_WEIXIN_BACKEND_ID,
   "codex",
   "claude",
+  "qoder",
+  "qwen",
+  "kimi",
   "opencode",
   "copilot",
   "auggie",
@@ -14,6 +17,9 @@ export const IMPLEMENTED_WEIXIN_BACKEND_IDS = [
   DEFAULT_WEIXIN_BACKEND_ID,
   "codex",
   "claude",
+  "qoder",
+  "qwen",
+  "kimi",
   "opencode",
   "copilot",
   "auggie",
@@ -27,6 +33,9 @@ export const WEIXIN_BACKEND_LABELS: Record<WeixinBackendId, string> = {
   openclaw: "OpenClaw",
   codex: "Codex",
   claude: "Claude Code",
+  qoder: "Qoder CLI",
+  qwen: "Qwen Code",
+  kimi: "Kimi CLI",
   opencode: "Opencode",
   copilot: "GitHub Copilot",
   auggie: "Auggie",
@@ -98,6 +107,9 @@ export function normalizeWeixinBackendId(raw: string): WeixinBackendId | undefin
   const trimmed = raw.trim().toLowerCase();
   if (!trimmed) return undefined;
   if (trimmed === "claude-code") return "claude";
+  if (trimmed === "qoder-cli") return "qoder";
+  if (trimmed === "qwen-code") return "qwen";
+  if (trimmed === "kimi-code" || trimmed === "kimi-cli") return "kimi";
   if (trimmed === "open-code" || trimmed === "opencode-ai") return "opencode";
   if (trimmed === "augment") return "auggie";
   if (trimmed === "github-copilot" || trimmed === "copilot-cli") return "copilot";

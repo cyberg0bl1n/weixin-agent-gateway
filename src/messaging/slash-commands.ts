@@ -8,6 +8,9 @@
  * - /openclaw              切换到 OpenClaw 后端
  * - /codex                 切换到 Codex ACP 后端
  * - /claude                切换到 Claude Code ACP 后端
+ * - /qoder                 切换到 Qoder CLI ACP 后端
+ * - /qwen                  切换到 Qwen Code ACP 后端
+ * - /kimi                  切换到 Kimi CLI ACP 后端
  */
 import type { WeixinApiOptions } from "../api/api.js";
 import {
@@ -82,7 +85,7 @@ function formatBackendStatus(ctx: SlashCommandContext): string {
     `当前后端: ${label}`,
     isDefault ? "来源: 默认" : "来源: 会话选择",
     `默认后端: ${WEIXIN_BACKEND_LABELS.openclaw}`,
-    `当前可用后端: ${WEIXIN_BACKEND_LABELS.openclaw}、${WEIXIN_BACKEND_LABELS.codex}、${WEIXIN_BACKEND_LABELS.claude}、${WEIXIN_BACKEND_LABELS.opencode}、${WEIXIN_BACKEND_LABELS.copilot}、${WEIXIN_BACKEND_LABELS.auggie}、${WEIXIN_BACKEND_LABELS.cursor}`,
+    `当前可用后端: ${WEIXIN_BACKEND_LABELS.openclaw}、${WEIXIN_BACKEND_LABELS.codex}、${WEIXIN_BACKEND_LABELS.claude}、${WEIXIN_BACKEND_LABELS.qoder}、${WEIXIN_BACKEND_LABELS.qwen}、${WEIXIN_BACKEND_LABELS.kimi}、${WEIXIN_BACKEND_LABELS.opencode}、${WEIXIN_BACKEND_LABELS.copilot}、${WEIXIN_BACKEND_LABELS.auggie}、${WEIXIN_BACKEND_LABELS.cursor}`,
   ].join("\n");
 }
 
@@ -97,7 +100,7 @@ async function handleBackendCommand(ctx: SlashCommandContext, args: string): Pro
       ctx,
       [
         `未知后端: ${args.trim()}`,
-        `当前支持: openclaw / codex / claude / opencode / copilot / auggie / cursor`,
+        `当前支持: openclaw / codex / claude / qoder / qwen / kimi / opencode / copilot / auggie / cursor`,
       ].join("\n"),
     );
     return;
@@ -165,6 +168,18 @@ export async function handleSlashCommand(
       case "/claude":
         setBackendSelection(ctx.accountId, ctx.to, "claude");
         await sendReply(ctx, `已切换到 ${WEIXIN_BACKEND_LABELS.claude} 后端。`);
+        return { handled: true };
+      case "/qoder":
+        setBackendSelection(ctx.accountId, ctx.to, "qoder");
+        await sendReply(ctx, `已切换到 ${WEIXIN_BACKEND_LABELS.qoder} 后端。`);
+        return { handled: true };
+      case "/qwen":
+        setBackendSelection(ctx.accountId, ctx.to, "qwen");
+        await sendReply(ctx, `已切换到 ${WEIXIN_BACKEND_LABELS.qwen} 后端。`);
+        return { handled: true };
+      case "/kimi":
+        setBackendSelection(ctx.accountId, ctx.to, "kimi");
+        await sendReply(ctx, `已切换到 ${WEIXIN_BACKEND_LABELS.kimi} 后端。`);
         return { handled: true };
       case "/opencode":
         setBackendSelection(ctx.accountId, ctx.to, "opencode");

@@ -1,6 +1,6 @@
 {
   "name": "@bytepioneer-ai/weixin-agent-gateway",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "OpenClaw Weixin channel",
   "license": "MIT",
   "author": "Tencent",

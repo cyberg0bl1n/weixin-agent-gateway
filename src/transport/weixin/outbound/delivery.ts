@@ -143,6 +143,24 @@ export function createWeixinReplyErrorHandler(params: {
       } else {
         notice = "⚠️ Codex 后端连接失败，请检查 codex-acp 和 codex 命令是否可用。";
       }
+    } else if (info.kind === "qoder" || lowerErrMsg.includes("qoder")) {
+      if (lowerErrMsg.includes("requires authentication") || lowerErrMsg.includes("/login") || lowerErrMsg.includes("personal_access_token")) {
+        notice = "⚠️ Qoder CLI 尚未完成登录，请先在网关工作目录手动执行一次 qodercli 并完成 /login，或设置 QODER_PERSONAL_ACCESS_TOKEN。";
+      } else {
+        notice = "⚠️ Qoder CLI 后端连接失败，请检查 qodercli 命令是否可用。";
+      }
+    } else if (info.kind === "qwen" || lowerErrMsg.includes("qwen")) {
+      if (lowerErrMsg.includes("requires authentication") || lowerErrMsg.includes("sign-in")) {
+        notice = "⚠️ Qwen Code 尚未完成登录，请先在网关工作目录手动执行一次 qwen。";
+      } else {
+        notice = "⚠️ Qwen Code 后端连接失败，请检查 qwen 命令是否可用。";
+      }
+    } else if (info.kind === "kimi" || lowerErrMsg.includes("kimi")) {
+      if (lowerErrMsg.includes("requires authentication") || lowerErrMsg.includes("/login") || lowerErrMsg.includes("sign-in")) {
+        notice = "⚠️ Kimi CLI 尚未完成登录，请先在网关工作目录手动执行一次 kimi，并完成 /login。";
+      } else {
+        notice = "⚠️ Kimi CLI 后端连接失败，请检查 kimi 命令是否可用。";
+      }
     } else if (info.kind === "opencode" || lowerErrMsg.includes("opencode")) {
       if (lowerErrMsg.includes("requires authentication") || lowerErrMsg.includes("auth login")) {
         notice = "⚠️ OpenCode 尚未完成登录，请先执行一次 opencode auth login，或在目标工作目录手动启动 opencode 完成初始化。";
