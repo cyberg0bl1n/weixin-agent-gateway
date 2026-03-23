@@ -10,6 +10,7 @@
 当前项目仍然以 **OpenClaw 微信插件** 形态运行，但已经开始支持“一个微信入口，对接多个后端”：
 
 - `openclaw`
+- `codex`
 - `claude`
 
 其他 backend id 仍然保留在路由和命令入口里，但当前还未接入实现。
@@ -25,7 +26,7 @@
 
 目前它还不是一个完全脱离 OpenClaw 的独立服务，但在切换后端时已经不再依赖 OpenClaw，也不会消耗 OpenClaw Token。
 
-后续将逐步实现脱离 OpenClaw 的独立运行，并继续完善 OpenClaw 与 Claude Code 的接入体验，再逐步补齐其他 ACP backend。
+后续将逐步实现脱离 OpenClaw 的独立运行，并继续完善 OpenClaw、Codex 与 Claude Code 的接入体验，再逐步补齐其他 ACP backend。
 
 当前运行方式：
 
@@ -33,7 +34,7 @@
 微信
   -> weixin-agent-gateway 插件
   -> 路由层
-  -> openclaw / claude
+  -> openclaw / codex / claude
 ```
 
 
@@ -50,6 +51,25 @@
 
 需要本机已经安装 OpenClaw，并且 `openclaw` 命令可用。
 
+如果你要使用 `codex`：
+
+- 需要本机已安装并登录 `codex`
+- 安装器会自动尝试安装 `@zed-industries/codex-acp`；如果失败，再按下面步骤手动补装
+- `codex` backend 当前直接通过 ACP 连接，不经过 AgentAPI
+- Codex 只会把 ACP 中 Codex 自己产出的描述性内容和正文段落拆成多个微信气泡发送，不会把工具调用手工转换成人话
+- 如果 `codex-acp` 不在 `PATH` 中，可以显式设置 `WEIXIN_CODEX_ACP_BIN`
+- 如果需要显式指定 Codex 会话工作目录，可以设置 `WEIXIN_CODEX_ACP_CWD`
+- 当前第一版 ACP 仍默认自动批准 Codex 的工具权限请求；如需关闭，可设置 `WEIXIN_CODEX_ACP_PERMISSION_MODE=cancel`
+
+首次使用 `codex` 前，建议先在你准备运行 `openclaw gateway` 的工作目录里手动执行一次 `codex`，完成登录确认流程。
+
+例如：
+
+```bash
+cd /path/to/workdir
+codex
+```
+
 如果你要使用 `claude`：
 
 - 需要本机已安装并登录 `claude`
@@ -63,9 +83,10 @@
 当前真正可用的 backend：
 
 - `openclaw`
+- `codex`
 - `claude`
 
-`codex`、`opencode`、`copilot`、`auggie`、`cursor` 当前仍只保留 backend id 和命令入口，后续将按 ACP 方式逐步接入。
+`opencode`、`copilot`、`auggie`、`cursor` 当前仍只保留 backend id 和命令入口，后续将按 ACP 方式逐步接入。
 
 首次使用 `claude` 前，还需要先在你准备运行 `openclaw gateway` 的工作目录里手动执行一次 `claude`，完成 Claude Code 的首次安全确认流程。
 
@@ -92,9 +113,10 @@ npx -y @bytepioneer-ai/weixin-agent-gateway install
 - 尝试禁用官方 `openclaw-weixin` 插件
 - 启用本插件
 - 触发微信扫码登录
+- 尝试安装 Codex ACP wrapper（如果本机未安装）
 - 尝试安装 Claude ACP wrapper（如果本机未安装）
 
-如果一键安装里只有 Claude ACP wrapper 安装失败：
+如果一键安装里只有 Codex / Claude ACP wrapper 安装失败：
 
 - 前面的插件安装、启用、微信登录通常已经完成，不需要从头重装插件
 - 修复网络后，可以重新执行一次：
@@ -103,7 +125,7 @@ npx -y @bytepioneer-ai/weixin-agent-gateway install
 npx -y @bytepioneer-ai/weixin-agent-gateway install
 ```
 
-- 如果只是 Claude ACP wrapper 安装失败，也可以直接按下面“手动安装 Claude ACP wrapper”的步骤补装
+- 如果只是 Codex / Claude ACP wrapper 安装失败，也可以直接按下面“手动安装 ACP wrapper”的步骤补装
 - 补装完成后执行：
 
 ```bash
@@ -139,9 +161,23 @@ openclaw channels login --channel weixin-agent-gateway
 openclaw gateway restart
 ```
 
-#### 5. 可选：手动安装 Claude ACP wrapper
+#### 5. 可选：手动安装 ACP wrapper
 
-只有在你要使用 `/claude` 且安装器自动安装失败时，才需要这一步。
+只有在你要使用 `/codex` 或 `/claude` 且安装器自动安装失败时，才需要这一步。
+
+Codex:
+
+```bash
+npm install -g @zed-industries/codex-acp
+```
+
+如果 `codex-acp` 不在 `PATH` 中，可以设置：
+
+```bash
+export WEIXIN_CODEX_ACP_BIN="codex-acp"
+```
+
+Claude:
 
 ```bash
 npm install -g @zed-industries/claude-agent-acp
@@ -161,6 +197,7 @@ export WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"
 
 ```text
 /openclaw
+/codex
 /claude
 ```
 
@@ -168,10 +205,12 @@ export WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"
 
 ```text
 /backend
+/backend codex
 /backend claude
 ```
 
 ## 鸣谢
 
 - `@tencent-weixin/openclaw-weixin`，本项目由此改编而来。
+- [`@zed-industries/codex-acp`](https://github.com/zed-industries/codex-acp)，本项目当前通过它接入 Codex。
 - [`Agent Client Protocol`](https://agentclientprotocol.com/) 与 [`@zed-industries/claude-agent-acp`](https://www.npmjs.com/package/@zed-industries/claude-agent-acp)，本项目当前通过它们接入 Claude Code。

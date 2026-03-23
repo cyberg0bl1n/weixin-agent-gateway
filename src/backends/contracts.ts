@@ -12,6 +12,7 @@ export const WEIXIN_BACKEND_IDS = [
 
 export const IMPLEMENTED_WEIXIN_BACKEND_IDS = [
   DEFAULT_WEIXIN_BACKEND_ID,
+  "codex",
   "claude",
 ] as const;
 

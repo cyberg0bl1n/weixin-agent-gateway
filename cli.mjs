@@ -8,6 +8,7 @@ const CHANNEL_ID = process.env.WEIXIN_GATEWAY_CHANNEL_ID?.trim() || "weixin-agen
 const PLUGIN_ENTRY_ID = process.env.WEIXIN_GATEWAY_PLUGIN_ID?.trim() || "weixin-agent-gateway";
 const OFFICIAL_PLUGIN_ENTRY_ID = "openclaw-weixin";
 const ENABLE_OFFICIAL_PLUGIN_CMD = "openclaw config set plugins.entries.openclaw-weixin.enabled true";
+const CODEX_ACP_NPM_PACKAGE = "@zed-industries/codex-acp";
 const CLAUDE_ACP_NPM_PACKAGE = "@zed-industries/claude-agent-acp";
 
 function log(msg) {
@@ -46,63 +47,81 @@ function commandExists(bin) {
   }
 }
 
-function printManualClaudeAcpInstallHelp() {
+function printManualAcpInstallHelp({ label, packageName, envVarName, binName }) {
   console.log();
-  warn("自动安装 Claude ACP wrapper 失败。");
+  warn(`自动安装 ${label} ACP wrapper 失败。`);
   console.log("你可以手动安装：");
-  console.log(`  npm install -g ${CLAUDE_ACP_NPM_PACKAGE}`);
+  console.log(`  npm install -g ${packageName}`);
   console.log();
   console.log("安装完成后，可重新执行：");
   console.log("  openclaw gateway restart");
   console.log("或在启动前显式指定：");
   if (isWindows()) {
-    console.log('  $env:WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"');
+    console.log(`  $env:${envVarName}="${binName}"`);
   } else {
-    console.log('  export WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"');
+    console.log(`  export ${envVarName}="${binName}"`);
   }
   console.log();
 }
 
-async function ensureClaudeAcpInstalled() {
-  if (commandExists("claude-agent-acp")) {
-    log("已检测到 claude-agent-acp");
-    return { installed: false, targetPath: "claude-agent-acp" };
+async function ensureAcpWrapperInstalled({ label, packageName, binName, envVarName }) {
+  if (commandExists(binName)) {
+    log(`已检测到 ${binName}`);
+    return { installed: false, targetPath: binName };
   }
 
   if (!commandExists("npm")) {
-    warn("未检测到 npm，无法自动安装 claude-agent-acp。");
-    printManualClaudeAcpInstallHelp();
+    warn(`未检测到 npm，无法自动安装 ${binName}。`);
+    printManualAcpInstallHelp({ label, packageName, envVarName, binName });
     return {
       installed: false,
-      targetPath: "claude-agent-acp",
+      targetPath: binName,
       manualInstallRequired: true,
     };
   }
 
-  log(`未检测到 claude-agent-acp，开始执行 npm install -g ${CLAUDE_ACP_NPM_PACKAGE} ...`);
+  log(`未检测到 ${binName}，开始执行 npm install -g ${packageName} ...`);
   try {
-    run(`npm install -g ${CLAUDE_ACP_NPM_PACKAGE}`, { silent: false });
+    run(`npm install -g ${packageName}`, { silent: false });
   } catch {
-    printManualClaudeAcpInstallHelp();
+    printManualAcpInstallHelp({ label, packageName, envVarName, binName });
     return {
       installed: false,
-      targetPath: "claude-agent-acp",
+      targetPath: binName,
       manualInstallRequired: true,
     };
   }
 
-  if (!commandExists("claude-agent-acp")) {
-    warn("claude-agent-acp 已安装，但当前 PATH 中可能还没有对应的 npm 全局 bin 目录。");
-    printManualClaudeAcpInstallHelp();
+  if (!commandExists(binName)) {
+    warn(`${binName} 已安装，但当前 PATH 中可能还没有对应的 npm 全局 bin 目录。`);
+    printManualAcpInstallHelp({ label, packageName, envVarName, binName });
     return {
       installed: true,
-      targetPath: "claude-agent-acp",
+      targetPath: binName,
       manualInstallRequired: true,
     };
   }
 
-  log("claude-agent-acp 已安装");
-  return { installed: true, targetPath: "claude-agent-acp" };
+  log(`${binName} 已安装`);
+  return { installed: true, targetPath: binName };
+}
+
+async function ensureClaudeAcpInstalled() {
+  return ensureAcpWrapperInstalled({
+    label: "Claude",
+    packageName: CLAUDE_ACP_NPM_PACKAGE,
+    binName: "claude-agent-acp",
+    envVarName: "WEIXIN_CLAUDE_ACP_BIN",
+  });
+}
+
+async function ensureCodexAcpInstalled() {
+  return ensureAcpWrapperInstalled({
+    label: "Codex",
+    packageName: CODEX_ACP_NPM_PACKAGE,
+    binName: "codex-acp",
+    envVarName: "WEIXIN_CODEX_ACP_BIN",
+  });
 }
 
 function ensureOpenClawInstalled() {
@@ -196,10 +215,19 @@ function restartGateway() {
   }
 }
 
-function printNextSteps(claudeAcpInfo) {
+function printNextSteps(codexAcpInfo, claudeAcpInfo) {
   console.log();
   log("安装完成。下一步建议：");
   console.log();
+  if (codexAcpInfo?.installed) {
+    console.log(`Codex ACP wrapper 已安装到: ${codexAcpInfo.targetPath}`);
+    console.log();
+  }
+  if (codexAcpInfo?.manualInstallRequired) {
+    console.log("Codex ACP wrapper 尚未自动安装完成。");
+    console.log(`可手动执行: npm install -g ${CODEX_ACP_NPM_PACKAGE}`);
+    console.log();
+  }
   if (claudeAcpInfo?.installed) {
     console.log(`Claude ACP wrapper 已安装到: ${claudeAcpInfo.targetPath}`);
     console.log();
@@ -210,18 +238,24 @@ function printNextSteps(claudeAcpInfo) {
     console.log();
   }
   console.log("1. 直接在微信里切换后端");
+  console.log("   /codex");
   console.log("   /claude");
   console.log("   /openclaw");
   console.log();
-  console.log("   当前真正可用的非 OpenClaw 后端只有 Claude Code。");
-  console.log("   其他预留后端（codex / opencode / copilot / auggie / cursor）当前尚未接入。");
+  console.log("   当前真正可用的非 OpenClaw 后端是 Codex 和 Claude Code。");
+  console.log("   其他预留后端（opencode / copilot / auggie / cursor）当前尚未接入。");
+  console.log("   Codex 现在走 direct ACP：需要本机 `codex` 与 `codex-acp` 可用，并先在目标工作目录手动执行一次 `codex` 完成登录。");
   console.log("   Claude Code 现在走 direct ACP：需要本机 `claude` 与 `claude-agent-acp` 可用，并先在目标工作目录手动执行一次 `claude` 完成 trust。");
   console.log();
-  console.log("2. 只有在你需要显式指定 Claude ACP 命令或工作目录时，才设置环境变量");
+  console.log("2. 只有在你需要显式指定 ACP 命令或工作目录时，才设置环境变量");
   if (isWindows()) {
+    console.log(`   $env:WEIXIN_CODEX_ACP_BIN="codex-acp"`);
+    console.log('   $env:WEIXIN_CODEX_ACP_CWD="D:\\your\\project"');
     console.log(`   $env:WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"`);
     console.log('   $env:WEIXIN_CLAUDE_ACP_CWD="D:\\your\\project"');
   } else {
+    console.log(`   export WEIXIN_CODEX_ACP_BIN="codex-acp"`);
+    console.log('   export WEIXIN_CODEX_ACP_CWD="/path/to/project"');
     console.log(`   export WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"`);
     console.log('   export WEIXIN_CLAUDE_ACP_CWD="/path/to/project"');
   }
@@ -234,9 +268,10 @@ async function install() {
   disableOfficialPlugin();
   enablePlugin();
   loginWeixin();
+  const codexAcpInfo = await ensureCodexAcpInstalled();
   const claudeAcpInfo = await ensureClaudeAcpInstalled();
   restartGateway();
-  printNextSteps(claudeAcpInfo);
+  printNextSteps(codexAcpInfo, claudeAcpInfo);
 }
 
 function help() {
@@ -244,7 +279,7 @@ function help() {
 用法: npx -y ${PACKAGE_NAME} <命令>
 
 命令:
-  install   安装插件、启用插件、扫码登录，并安装 Claude ACP wrapper
+  install   安装插件、启用插件、扫码登录，并安装 Codex / Claude ACP wrapper
   help      显示帮助信息
 `);
 }

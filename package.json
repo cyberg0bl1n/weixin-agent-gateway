@@ -1,12 +1,12 @@
 {
   "name": "@bytepioneer-ai/weixin-agent-gateway",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "OpenClaw Weixin channel",
   "license": "MIT",
   "author": "Tencent",
   "type": "module",
   "bin": {
-    "weixin-agent-gateway": "./cli.mjs"
+    "weixin-agent-gateway": "cli.mjs"
   },
   "files": [
     "src/",
@@ -25,8 +25,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "prepublishOnly": "npm run typecheck && npm run build",
-    "publish:npm": "node ./scripts/publish-npm.mjs",
-    "publish:npm:dry-run": "node ./scripts/publish-npm.mjs --dry-run"
+    "publish:npm": "node ./scripts/publish-npm.mjs"
   },
   "engines": {
     "node": ">=22"

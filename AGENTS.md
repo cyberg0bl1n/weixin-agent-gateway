@@ -25,7 +25,9 @@ Weixin -> openclaw-weixin plugin -> OpenClaw
 
 - 保留微信接入能力
 - 保留 OpenClaw 作为已实现 backend
-- 预留 `codex`、`claude code` 等其他 backend 的接入点
+- 已接入 `codex`
+- 已接入 `claude code`
+- 继续为 `opencode` 等其他 backend 预留接入点
 - 逐步把后端选择从“只有 OpenClaw”演进为“可切换多 backend”
 
 目标方向是：
@@ -53,7 +55,11 @@ Weixin
 - 返回文本输出
 - 可选返回图片或文件
 
-`codex`、`claude code` 当前还没有接入实现，只是按这个目标预留了接口和命令入口。
+当前实际状态已经更新为：
+
+- `claude code` 已经接入实现
+- `codex` 已经接入实现
+- `opencode` 等其他 backend 仍然只是按这个目标预留接口和命令入口
 
 ## 当前设计原则
 
@@ -115,14 +121,16 @@ Weixin
 
 - OpenClaw backend 已实现并可用
 - `lightweight` backend 模式已经定义
-- `codex`、`claude` 只存在 backend id、命令占位和轻量输入输出接口
+- `codex` 已实现并可用，当前通过 ACP 直接接入 Codex
+- `claude` 已实现并可用，当前通过 ACP 直接接入 Claude Code
+- `opencode`、`copilot`、`auggie`、`cursor` 当前仍只保留 backend id 与命令入口
 - `src/router` 和 `src/backends` 的拆分已经落地
 - 但主链路仍然默认围绕 OpenClaw runtime 运转
 
 换句话说：
 
 - 现在不是“多 backend 全部可用”
-- 而是“OpenClaw 可用，其他 backend 可以开始接入”
+- 而是“OpenClaw 可用，Codex 可用，Claude 可用，其他 backend 可以开始接入”
 
 ## 当前明确结论
 
@@ -131,22 +139,54 @@ Weixin
 - 已经可以继续实现其他 backend
 - 不需要再为 `codex` / `claude code` 大规模重构 OpenClaw 内核
 - 后续新增 backend 应优先走 `lightweight` 模式
-- 当前真正可工作的 backend 只有 `openclaw`
+- 当前真正可工作的 backend 是 `openclaw`、`codex` 和 `claude`
+
+## 当前 ACP 结论
+
+当前仓库已经明确切换到 ACP 方向：
+
+- `claude` backend 当前通过 ACP 直接连接 Claude Code
+- `codex` backend 当前通过 ACP 直接连接 Codex
+- AgentAPI 实现已经从仓库中移除
+- 后续新增 `codex` / `opencode` / `copilot` / `auggie` / `cursor` 时，也应优先按 direct ACP 接入
+
+当前不再建议：
+
+- 新增基于 AgentAPI 的 backend
+- 恢复 AgentAPI 安装或自动拉起逻辑
 
 ## 新 backend 的实现原则
 
-新增 `codex` / `claude` 时：
+新增 `opencode` / `copilot` / `auggie` / `cursor` 时：
 
 - 优先实现 `mode: "lightweight"` adapter
 - 输入只消费文本和图片路径
 - 输出只返回文本和可选媒体路径 / URL
 - 不要复用 OpenClaw 的 route / session / reply-dispatcher
-- 在接入完成前，`/codex`、`/claude` 仍只是占位命令
+- 优先通过 ACP 直接连接对应 CLI / agent
+
+其中当前已落地的是：
+
+- `codex`
+  - direct ACP
+  - 通过 `codex-acp` 连接 Codex
+- `claude`
+  - direct ACP
+  - 通过 `claude-agent-acp` 连接 Claude Code
+
+当前仍未落地的是：
+
+- `opencode`
+- `copilot`
+- `auggie`
+- `cursor`
 
 换句话说：
 
 - `openclaw` 是复杂 backend
-- `codex` / `claude` 是轻量 backend
+- `codex` 是已实现的 ACP 轻量 backend
+- `claude` 是已实现的 ACP 轻量 backend
+- `opencode` / `copilot` / `auggie` / `cursor` 是待实现的 ACP 轻量 backend
 
 ## 开发时应避免的事情
 

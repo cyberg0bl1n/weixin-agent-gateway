@@ -137,6 +137,12 @@ export function createWeixinReplyErrorHandler(params: {
       } else {
         notice = "⚠️ Claude Code 后端连接失败，请检查 claude-agent-acp 和 claude 命令是否可用。";
       }
+    } else if (info.kind === "codex" || lowerErrMsg.includes("codex-acp") || lowerErrMsg.includes("codex acp")) {
+      if (lowerErrMsg.includes("requires authentication") || lowerErrMsg.includes("sign-in")) {
+        notice = "⚠️ Codex 尚未完成登录，请先在网关工作目录手动执行一次 codex。";
+      } else {
+        notice = "⚠️ Codex 后端连接失败，请检查 codex-acp 和 codex 命令是否可用。";
+      }
     } else if (isKnownBackend && info.kind !== "openclaw") {
       const backendLabel = isKnownBackend ? WEIXIN_BACKEND_LABELS[info.kind] : "Agent";
       notice = `⚠️ ${backendLabel} 后端连接失败，请检查对应 CLI / ACP 命令是否可用。`;
