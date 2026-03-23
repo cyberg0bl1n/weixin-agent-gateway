@@ -12,12 +12,7 @@ export const WEIXIN_BACKEND_IDS = [
 
 export const IMPLEMENTED_WEIXIN_BACKEND_IDS = [
   DEFAULT_WEIXIN_BACKEND_ID,
-  "codex",
   "claude",
-  "opencode",
-  "copilot",
-  "auggie",
-  "cursor",
 ] as const;
 
 export type WeixinBackendId = (typeof WEIXIN_BACKEND_IDS)[number];
@@ -49,12 +44,18 @@ export type WeixinLightweightBackendInput = {
   contextToken?: string;
   messageId?: string;
   timestamp?: number;
+  emitProgress?: (progress: WeixinLightweightBackendProgress) => Promise<void>;
 };
 
 export type WeixinLightweightBackendOutput = {
   text?: string;
   mediaUrl?: string;
   mediaUrls?: string[];
+};
+
+export type WeixinLightweightBackendProgress = {
+  kind: "message" | "plan" | "status";
+  text: string;
 };
 
 export type WeixinOpenClawBackendAdapter = {

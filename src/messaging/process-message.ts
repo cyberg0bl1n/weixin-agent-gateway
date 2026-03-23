@@ -213,13 +213,27 @@ export async function processOneMessage(
   try {
     if (backendAdapter.mode === "lightweight") {
       debugTs.preDispatch = Date.now();
-      const output = await backendAdapter.reply(
-        buildWeixinLightweightBackendInput({
+      const lightweightInput = {
+        ...buildWeixinLightweightBackendInput({
           full,
           ctx,
           mediaOpts,
           accountId: deps.accountId,
         }),
+        emitProgress: async ({ text }: { text: string }) => {
+          const trimmed = text.trim();
+          if (!trimmed) return;
+          try {
+            await replyDeliverer({ text: trimmed });
+          } catch (progressErr) {
+            logger.warn(
+              `lightweight progress delivery failed backend=${backendAdapter.id} err=${String(progressErr)}`,
+            );
+          }
+        },
+      };
+      const output = await backendAdapter.reply(
+        lightweightInput,
       );
       if (output && (output.text || output.mediaUrl || output.mediaUrls?.length)) {
         await replyDeliverer(output);

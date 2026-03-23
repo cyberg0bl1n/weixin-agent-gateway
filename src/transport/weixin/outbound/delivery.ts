@@ -131,16 +131,15 @@ export function createWeixinReplyErrorHandler(params: {
       return;
     }
     const isKnownBackend = isWeixinBackendId(info.kind);
-    if (
-      (isKnownBackend && info.kind !== "openclaw") ||
-      lowerErrMsg.includes("agentapi") ||
-      lowerErrMsg.includes("get /status") ||
-      lowerErrMsg.includes("get /messages") ||
-      lowerErrMsg.includes("post /message") ||
-      lowerErrMsg.includes("post /upload")
-    ) {
+    if (info.kind === "claude" || lowerErrMsg.includes("claude-acp") || lowerErrMsg.includes("claude acp")) {
+      if (lowerErrMsg.includes("requires authentication") || lowerErrMsg.includes("login/trust")) {
+        notice = "⚠️ Claude Code 尚未完成登录或工作目录信任，请先在网关工作目录手动执行一次 claude。";
+      } else {
+        notice = "⚠️ Claude Code 后端连接失败，请检查 claude-agent-acp 和 claude 命令是否可用。";
+      }
+    } else if (isKnownBackend && info.kind !== "openclaw") {
       const backendLabel = isKnownBackend ? WEIXIN_BACKEND_LABELS[info.kind] : "Agent";
-      notice = `⚠️ ${backendLabel} 后端连接失败，请检查 agentapi 和对应命令是否可用，或 AgentAPI 地址配置是否正确。`;
+      notice = `⚠️ ${backendLabel} 后端连接失败，请检查对应 CLI / ACP 命令是否可用。`;
     } else if (errMsg.includes("remote media download failed") || errMsg.includes("fetch")) {
       notice = "⚠️ 媒体文件下载失败，请检查链接是否可访问。";
     } else if (
@@ -162,3 +161,4 @@ export function createWeixinReplyErrorHandler(params: {
     });
   };
 }
+

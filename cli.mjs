@@ -1,25 +1,14 @@
 #!/usr/bin/env node
 
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { chmodSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 const PACKAGE_NAME = "@bytepioneer-ai/weixin-agent-gateway";
-const INSTALLER_USER_AGENT = "weixin-agent-gateway-installer";
 const PLUGIN_SPEC = process.env.WEIXIN_GATEWAY_PLUGIN_SPEC?.trim() || PACKAGE_NAME;
 const CHANNEL_ID = process.env.WEIXIN_GATEWAY_CHANNEL_ID?.trim() || "weixin-agent-gateway";
 const PLUGIN_ENTRY_ID = process.env.WEIXIN_GATEWAY_PLUGIN_ID?.trim() || "weixin-agent-gateway";
 const OFFICIAL_PLUGIN_ENTRY_ID = "openclaw-weixin";
 const ENABLE_OFFICIAL_PLUGIN_CMD = "openclaw config set plugins.entries.openclaw-weixin.enabled true";
-const AGENTAPI_VERSION = process.env.AGENTAPI_VERSION?.trim() || "latest";
-const DEFAULT_CODEX_AGENTAPI_URL = "http://localhost:3284";
-const DEFAULT_CLAUDE_AGENTAPI_URL = "http://localhost:3285";
-const DEFAULT_OPENCODE_AGENTAPI_URL = "http://localhost:3286";
-const DEFAULT_COPILOT_AGENTAPI_URL = "http://localhost:3287";
-const DEFAULT_AUGGIE_AGENTAPI_URL = "http://localhost:3288";
-const DEFAULT_CURSOR_AGENTAPI_URL = "http://localhost:3289";
+const CLAUDE_ACP_NPM_PACKAGE = "@zed-industries/claude-agent-acp";
 
 function log(msg) {
   console.log(`\x1b[36m[weixin-agent-gateway]\x1b[0m ${msg}`);
@@ -57,164 +46,63 @@ function commandExists(bin) {
   }
 }
 
-function resolveAgentApiArch() {
-  switch (process.arch) {
-    case "x64":
-      return "amd64";
-    case "arm64":
-      return "arm64";
-    default:
-      throw new Error(`Unsupported architecture for agentapi: ${process.arch}`);
-  }
-}
-
-function resolveAgentApiOs() {
-  switch (process.platform) {
-    case "linux":
-      return "linux";
-    case "darwin":
-      return "darwin";
-    case "win32":
-      return "windows";
-    default:
-      throw new Error(`Unsupported platform for agentapi: ${process.platform}`);
-  }
-}
-
-function resolveAgentApiBinaryName() {
-  const osPart = resolveAgentApiOs();
-  const archPart = resolveAgentApiArch();
-  return isWindows() ? `agentapi-${osPart}-${archPart}.exe` : `agentapi-${osPart}-${archPart}`;
-}
-
-function resolveAgentApiDownloadUrl(fileName) {
-  if (AGENTAPI_VERSION === "latest") {
-    return `https://github.com/coder/agentapi/releases/latest/download/${fileName}`;
-  }
-  return `https://github.com/coder/agentapi/releases/download/${AGENTAPI_VERSION}/${fileName}`;
-}
-
-function resolveUserBinDir() {
-  return path.join(os.homedir(), ".local", "bin");
-}
-
-async function downloadToFile(url, filePath) {
-  const res = await fetch(url, {
-    headers: { "User-Agent": INSTALLER_USER_AGENT },
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Download failed: HTTP ${res.status} ${res.statusText}${body ? ` - ${body}` : ""}`);
-  }
-  const arr = await res.arrayBuffer();
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, Buffer.from(arr));
-}
-
-function collectErrorTexts(err) {
-  const texts = [];
-  let current = err;
-  while (current) {
-    if (current instanceof Error) {
-      if (current.message) texts.push(current.message);
-      current = current.cause;
-      continue;
-    }
-    if (typeof current === "object" && current && "message" in current) {
-      const message = current.message;
-      if (typeof message === "string" && message) {
-        texts.push(message);
-      }
-      current = "cause" in current ? current.cause : undefined;
-      continue;
-    }
-    break;
-  }
-  return texts;
-}
-
-function isAgentApiDownloadNetworkError(err) {
-  const joined = collectErrorTexts(err).join("\n").toLowerCase();
-  return [
-    "fetch failed",
-    "connect timeout",
-    "timed out",
-    "econnreset",
-    "enotfound",
-    "eai_again",
-    "und_err_connect_timeout",
-    "github.com:443",
-  ].some((token) => joined.includes(token));
-}
-
-function printManualAgentApiInstallHelp({ downloadUrl, targetPath }) {
-  const binDir = resolveUserBinDir();
+function printManualClaudeAcpInstallHelp() {
   console.log();
-  warn("自动下载 AgentAPI 失败，当前机器可能无法直接访问 GitHub。");
-  console.log("你可以手动下载安装 AgentAPI：");
-  console.log(`  下载地址: ${downloadUrl}`);
-  console.log(`  建议安装路径: ${targetPath}`);
-  console.log();
-  if (isWindows()) {
-    console.log("Windows 示例：");
-    console.log(`  1. 下载后重命名为 agentapi.exe`);
-    console.log(`  2. 放到 ${binDir}`);
-    console.log(`  3. 确保 ${binDir} 在 PATH 中`);
-  } else {
-    console.log("Linux/macOS 示例：");
-    console.log(`  mkdir -p "${binDir}"`);
-    console.log(`  cp /path/to/agentapi "${targetPath}"`);
-    console.log(`  chmod +x "${targetPath}"`);
-    console.log(`  export PATH="${binDir}:$PATH"`);
-  }
+  warn("自动安装 Claude ACP wrapper 失败。");
+  console.log("你可以手动安装：");
+  console.log(`  npm install -g ${CLAUDE_ACP_NPM_PACKAGE}`);
   console.log();
   console.log("安装完成后，可重新执行：");
   console.log("  openclaw gateway restart");
   console.log("或在启动前显式指定：");
   if (isWindows()) {
-    console.log(`  $env:WEIXIN_AGENTAPI_BIN="${targetPath}"`);
+    console.log('  $env:WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"');
   } else {
-    console.log(`  export WEIXIN_AGENTAPI_BIN="${targetPath}"`);
+    console.log('  export WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"');
   }
   console.log();
 }
 
-async function ensureAgentApiInstalled() {
-  if (commandExists("agentapi")) {
-    log("已检测到 agentapi");
-    return { installed: false, targetPath: "agentapi" };
+async function ensureClaudeAcpInstalled() {
+  if (commandExists("claude-agent-acp")) {
+    log("已检测到 claude-agent-acp");
+    return { installed: false, targetPath: "claude-agent-acp" };
   }
 
-  log("未检测到 agentapi，开始下载最新二进制...");
-  const fileName = resolveAgentApiBinaryName();
-  const downloadUrl = resolveAgentApiDownloadUrl(fileName);
-  const binDir = resolveUserBinDir();
-  const targetPath = path.join(binDir, isWindows() ? "agentapi.exe" : "agentapi");
+  if (!commandExists("npm")) {
+    warn("未检测到 npm，无法自动安装 claude-agent-acp。");
+    printManualClaudeAcpInstallHelp();
+    return {
+      installed: false,
+      targetPath: "claude-agent-acp",
+      manualInstallRequired: true,
+    };
+  }
 
+  log(`未检测到 claude-agent-acp，开始执行 npm install -g ${CLAUDE_ACP_NPM_PACKAGE} ...`);
   try {
-    await downloadToFile(downloadUrl, targetPath);
-  } catch (err) {
-    if (isAgentApiDownloadNetworkError(err)) {
-      printManualAgentApiInstallHelp({ downloadUrl, targetPath });
-      return { installed: false, targetPath, manualInstallRequired: true };
-    }
-    throw err;
-  }
-  if (!isWindows()) {
-    chmodSync(targetPath, 0o755);
+    run(`npm install -g ${CLAUDE_ACP_NPM_PACKAGE}`, { silent: false });
+  } catch {
+    printManualClaudeAcpInstallHelp();
+    return {
+      installed: false,
+      targetPath: "claude-agent-acp",
+      manualInstallRequired: true,
+    };
   }
 
-  const pathParts = (process.env.PATH || "").split(path.delimiter);
-  if (!pathParts.includes(binDir)) {
-    process.env.PATH = `${binDir}${path.delimiter}${process.env.PATH || ""}`;
+  if (!commandExists("claude-agent-acp")) {
+    warn("claude-agent-acp 已安装，但当前 PATH 中可能还没有对应的 npm 全局 bin 目录。");
+    printManualClaudeAcpInstallHelp();
+    return {
+      installed: true,
+      targetPath: "claude-agent-acp",
+      manualInstallRequired: true,
+    };
   }
 
-  if (!commandExists("agentapi")) {
-    warn(`agentapi 已下载到 ${targetPath}，但当前 PATH 中可能还没有 ${binDir}`);
-  } else {
-    log(`agentapi 已安装到 ${targetPath}`);
-  }
-  return { installed: true, targetPath };
+  log("claude-agent-acp 已安装");
+  return { installed: true, targetPath: "claude-agent-acp" };
 }
 
 function ensureOpenClawInstalled() {
@@ -308,46 +196,34 @@ function restartGateway() {
   }
 }
 
-function printNextSteps(agentapiInfo) {
+function printNextSteps(claudeAcpInfo) {
   console.log();
   log("安装完成。下一步建议：");
   console.log();
-  if (agentapiInfo?.installed) {
-    console.log(`AgentAPI 已下载到: ${agentapiInfo.targetPath}`);
+  if (claudeAcpInfo?.installed) {
+    console.log(`Claude ACP wrapper 已安装到: ${claudeAcpInfo.targetPath}`);
     console.log();
   }
-  if (agentapiInfo?.manualInstallRequired) {
-    console.log("AgentAPI 尚未自动安装完成。");
-    console.log("完成手动安装后，再执行一次 `openclaw gateway restart` 即可。");
+  if (claudeAcpInfo?.manualInstallRequired) {
+    console.log("Claude ACP wrapper 尚未自动安装完成。");
+    console.log(`可手动执行: npm install -g ${CLAUDE_ACP_NPM_PACKAGE}`);
     console.log();
   }
   console.log("1. 直接在微信里切换后端");
-  console.log("   /codex");
   console.log("   /claude");
-  console.log("   /opencode");
-  console.log("   /copilot");
-  console.log("   /auggie");
-  console.log("   /cursor");
   console.log("   /openclaw");
   console.log();
-  console.log("   默认会连接本地 AgentAPI：Codex 3284，Claude 3285，Opencode 3286，Copilot 3287，Auggie 3288，Cursor 3289；没拉起时会自动尝试启动。");
-  console.log("   前提是本机 `agentapi` 和对应 CLI 命令可用且已登录。");
+  console.log("   当前真正可用的非 OpenClaw 后端只有 Claude Code。");
+  console.log("   其他预留后端（codex / opencode / copilot / auggie / cursor）当前尚未接入。");
+  console.log("   Claude Code 现在走 direct ACP：需要本机 `claude` 与 `claude-agent-acp` 可用，并先在目标工作目录手动执行一次 `claude` 完成 trust。");
   console.log();
-  console.log("2. 只有在你需要改远端地址或非默认端口时，才设置环境变量");
+  console.log("2. 只有在你需要显式指定 Claude ACP 命令或工作目录时，才设置环境变量");
   if (isWindows()) {
-    console.log(`   $env:WEIXIN_CODEX_AGENTAPI_URL=\"${DEFAULT_CODEX_AGENTAPI_URL}\"`);
-    console.log(`   $env:WEIXIN_CLAUDE_AGENTAPI_URL=\"${DEFAULT_CLAUDE_AGENTAPI_URL}\"`);
-    console.log(`   $env:WEIXIN_OPENCODE_AGENTAPI_URL=\"${DEFAULT_OPENCODE_AGENTAPI_URL}\"`);
-    console.log(`   $env:WEIXIN_COPILOT_AGENTAPI_URL=\"${DEFAULT_COPILOT_AGENTAPI_URL}\"`);
-    console.log(`   $env:WEIXIN_AUGGIE_AGENTAPI_URL=\"${DEFAULT_AUGGIE_AGENTAPI_URL}\"`);
-    console.log(`   $env:WEIXIN_CURSOR_AGENTAPI_URL=\"${DEFAULT_CURSOR_AGENTAPI_URL}\"`);
+    console.log(`   $env:WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"`);
+    console.log('   $env:WEIXIN_CLAUDE_ACP_CWD="D:\\your\\project"');
   } else {
-    console.log(`   export WEIXIN_CODEX_AGENTAPI_URL=\"${DEFAULT_CODEX_AGENTAPI_URL}\"`);
-    console.log(`   export WEIXIN_CLAUDE_AGENTAPI_URL=\"${DEFAULT_CLAUDE_AGENTAPI_URL}\"`);
-    console.log(`   export WEIXIN_OPENCODE_AGENTAPI_URL=\"${DEFAULT_OPENCODE_AGENTAPI_URL}\"`);
-    console.log(`   export WEIXIN_COPILOT_AGENTAPI_URL=\"${DEFAULT_COPILOT_AGENTAPI_URL}\"`);
-    console.log(`   export WEIXIN_AUGGIE_AGENTAPI_URL=\"${DEFAULT_AUGGIE_AGENTAPI_URL}\"`);
-    console.log(`   export WEIXIN_CURSOR_AGENTAPI_URL=\"${DEFAULT_CURSOR_AGENTAPI_URL}\"`);
+    console.log(`   export WEIXIN_CLAUDE_ACP_BIN="claude-agent-acp"`);
+    console.log('   export WEIXIN_CLAUDE_ACP_CWD="/path/to/project"');
   }
   console.log();
 }
@@ -358,9 +234,9 @@ async function install() {
   disableOfficialPlugin();
   enablePlugin();
   loginWeixin();
-  const agentapiInfo = await ensureAgentApiInstalled();
+  const claudeAcpInfo = await ensureClaudeAcpInstalled();
   restartGateway();
-  printNextSteps(agentapiInfo);
+  printNextSteps(claudeAcpInfo);
 }
 
 function help() {
@@ -368,7 +244,7 @@ function help() {
 用法: npx -y ${PACKAGE_NAME} <命令>
 
 命令:
-  install   安装插件、启用插件、扫码登录，并安装 AgentAPI
+  install   安装插件、启用插件、扫码登录，并安装 Claude ACP wrapper
   help      显示帮助信息
 `);
 }
