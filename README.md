@@ -60,6 +60,19 @@
 
 AgentAPI 只是远程控制层，不负责登录。
 
+首次使用 `claude` 前，还需要先在你准备运行 `openclaw gateway` 的工作目录里手动执行一次 `claude`，完成 Claude Code 的首次安全确认流程。
+
+这是因为 Claude Code 会按工作目录记录这次确认；如果没有先确认，AgentAPI 首次自动拉起 `claude` 时，可能会卡在 trust 确认页，表现为微信侧调用超时。
+
+例如，如果你准备在 `/path/to/workdir` 下启动 OpenClaw：
+
+```bash
+cd /path/to/workdir
+claude
+```
+
+进入 Claude Code 后，先完成一次确认，然后再启动或重启 `openclaw gateway`。
+
 当前默认本地地址：
 
 - `codex`: `http://localhost:3284`

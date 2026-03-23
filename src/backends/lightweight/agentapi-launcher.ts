@@ -37,6 +37,8 @@ const LOCAL_AGENTAPI_HOSTS = new Set([
 const DEFAULT_AUTOSTART_PROBE_TIMEOUT_MS = 1_500;
 const DEFAULT_AUTOSTART_WAIT_TIMEOUT_MS = 20_000;
 const startupTasks = new Map<string, Promise<void>>();
+const autoStartedAgentApiPids = new Set<number>();
+let cleanupHooksRegistered = false;
 
 function trimTrailingSlash(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, "");
@@ -48,6 +50,67 @@ function isWindows(): boolean {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function trackAutoStartedAgentApi(pid: number): void {
+  autoStartedAgentApiPids.add(pid);
+  registerAutoStartedAgentApiCleanupHooks();
+}
+
+function untrackAutoStartedAgentApi(pid: number): void {
+  autoStartedAgentApiPids.delete(pid);
+}
+
+function stopAutoStartedAgentApi(pid: number): void {
+  try {
+    if (isWindows()) {
+      process.kill(pid, "SIGTERM");
+      return;
+    }
+
+    // Detached AgentAPI becomes its own process group; target the group so the wrapped CLI exits too.
+    process.kill(-pid, "SIGTERM");
+  } catch (err) {
+    const errorCode =
+      err && typeof err === "object" && "code" in err && typeof err.code === "string" ? err.code : undefined;
+    if (errorCode === "ESRCH") {
+      return;
+    }
+
+    try {
+      process.kill(pid, "SIGTERM");
+    } catch (fallbackErr) {
+      const fallbackCode =
+        fallbackErr && typeof fallbackErr === "object" && "code" in fallbackErr && typeof fallbackErr.code === "string"
+          ? fallbackErr.code
+          : undefined;
+      if (fallbackCode === "ESRCH") {
+        return;
+      }
+      logger.warn(`agentapi autostart: failed to stop pid=${pid}: ${String(fallbackErr)}`);
+    }
+  }
+}
+
+function cleanupAutoStartedAgentApis(reason: string): void {
+  const pids = Array.from(autoStartedAgentApiPids);
+  autoStartedAgentApiPids.clear();
+  for (const pid of pids) {
+    logger.info(`agentapi autostart: stopping pid=${pid} reason=${reason}`);
+    stopAutoStartedAgentApi(pid);
+  }
+}
+
+function registerAutoStartedAgentApiCleanupHooks(): void {
+  if (cleanupHooksRegistered) return;
+  cleanupHooksRegistered = true;
+
+  process.once("beforeExit", () => {
+    cleanupAutoStartedAgentApis("beforeExit");
+  });
+  process.once("exit", () => {
+    cleanupAutoStartedAgentApis("exit");
+  });
 }
 
 function isAutoStartEnabled(): boolean {
@@ -263,8 +326,8 @@ async function waitForStatus(baseUrl: string, timeoutMs: number, pollIntervalMs:
   throw new Error(`AgentAPI auto-start failed: ${baseUrl} did not become reachable in time.`);
 }
 
-async function spawnDetached(agentapiBin: string, args: string[]): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
+async function spawnDetached(agentapiBin: string, args: string[]): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
     const child = spawn(agentapiBin, args, {
       detached: true,
       shell: false,
@@ -274,9 +337,18 @@ async function spawnDetached(agentapiBin: string, args: string[]): Promise<void>
     });
     child.once("error", reject);
     child.once("spawn", () => {
+      const pid = child.pid;
+      if (!pid) {
+        reject(new Error("AgentAPI auto-start failed: spawned process has no pid."));
+        return;
+      }
+      trackAutoStartedAgentApi(pid);
+      child.once("exit", () => {
+        untrackAutoStartedAgentApi(pid);
+      });
       child.stdin?.end();
       child.unref();
-      resolve();
+      resolve(pid);
     });
   });
 }
@@ -300,7 +372,8 @@ async function startLocalAgentApi(options: EnsureAgentApiRunningOptions, url: UR
     `agentapi autostart: launching backend=${options.backendId} url=${options.baseUrl} command=${[agentapiBin, ...args].map(quoteForDisplay).join(" ")}`,
   );
 
-  await spawnDetached(agentapiBin, args);
+  const pid = await spawnDetached(agentapiBin, args);
+  logger.info(`agentapi autostart: spawned pid=${pid} backend=${options.backendId}`);
   await waitForStatus(
     options.baseUrl,
     Math.max(options.requestTimeoutMs, DEFAULT_AUTOSTART_WAIT_TIMEOUT_MS),
