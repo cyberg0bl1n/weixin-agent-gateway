@@ -25,6 +25,7 @@ import {
   createWeixinReplyErrorHandler,
   type WeixinDebugDeliveryRecord,
 } from "../transport/weixin/outbound/delivery.js";
+import { createLightweightTextReplyBudgeter } from "../transport/weixin/outbound/lightweight-text-budget.js";
 import { createWeixinTypingTransportConfig } from "../transport/weixin/outbound/typing.js";
 import { logger } from "../util/logger.js";
 import { redactBody } from "../util/redact.js";
@@ -213,6 +214,11 @@ export async function processOneMessage(
   try {
     if (backendAdapter.mode === "lightweight") {
       debugTs.preDispatch = Date.now();
+      const lightweightReplyBudgeter = createLightweightTextReplyBudgeter({
+        sendText: async (text: string) => {
+          await replyDeliverer({ text });
+        },
+      });
       const lightweightInput = {
         ...buildWeixinLightweightBackendInput({
           full,
@@ -224,7 +230,7 @@ export async function processOneMessage(
           const trimmed = text.trim();
           if (!trimmed) return;
           try {
-            await replyDeliverer({ text: trimmed });
+            await lightweightReplyBudgeter.pushProgress(trimmed);
           } catch (progressErr) {
             logger.warn(
               `lightweight progress delivery failed backend=${backendAdapter.id} err=${String(progressErr)}`,
@@ -235,9 +241,7 @@ export async function processOneMessage(
       const output = await backendAdapter.reply(
         lightweightInput,
       );
-      if (output && (output.text || output.mediaUrl || output.mediaUrls?.length)) {
-        await replyDeliverer(output);
-      }
+      await lightweightReplyBudgeter.finish(output?.text);
       return;
     }
 
