@@ -1,10 +1,11 @@
-import type { ChannelAccountSnapshot, PluginRuntime } from "openclaw/plugin-sdk";
+import type { ChannelAccountSnapshot } from "openclaw/plugin-sdk/channel-contract";
+import type { OpenClawConfig, PluginRuntime } from "openclaw/plugin-sdk/core";
 
 import { getUpdates } from "../api/api.js";
 import { WeixinConfigManager } from "../api/config-cache.js";
 import { SESSION_EXPIRED_ERRCODE, pauseSession, getRemainingPauseMs } from "../api/session-guard.js";
 import { processOneMessage } from "../messaging/process-message.js";
-import { getWeixinRuntime, waitForWeixinRuntime } from "../runtime.js";
+import { waitForWeixinRuntime } from "../runtime.js";
 import { getSyncBufFilePath, loadGetUpdatesBuf, saveGetUpdatesBuf } from "../storage/sync-buf.js";
 import { logger } from "../util/logger.js";
 import type { Logger } from "../util/logger.js";
@@ -22,7 +23,7 @@ export type MonitorWeixinOpts = {
   accountId: string;
   /** When non-empty, only messages whose from_user_id is in this list are processed. */
   allowFrom?: string[];
-  config: import("openclaw/plugin-sdk/core").OpenClawConfig;
+  config: OpenClawConfig;
   runtime?: { log?: (msg: string) => void; error?: (msg: string) => void };
   abortSignal?: AbortSignal;
   longPollTimeoutMs?: number;

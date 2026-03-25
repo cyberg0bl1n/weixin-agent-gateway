@@ -1,18 +1,21 @@
+import fs from "node:fs";
+import path from "node:path";
+
+import { WEIXIN_CHANNEL_ID, WEIXIN_STATE_NAMESPACE } from "../constants.js";
 import { logger } from "../util/logger.js";
 import { generateId } from "../util/random.js";
 import type { WeixinMessage, MessageItem } from "../api/types.js";
 import { MessageItemType } from "../api/types.js";
-import { WEIXIN_CHANNEL_ID } from "../constants.js";
+import { resolveStateDir } from "../storage/state-dir.js";
 
 // ---------------------------------------------------------------------------
-// Context token store (in-process cache: accountId+userId → contextToken)
+// Context token store (in-process cache + disk persistence)
 // ---------------------------------------------------------------------------
 
 /**
  * contextToken is issued per-message by the Weixin getupdates API and must
- * be echoed verbatim in every outbound send. It is not persisted: the monitor
- * loop populates this map on each inbound message, and the outbound adapter
- * reads it back when the agent sends a reply.
+ * be echoed verbatim in every outbound send. The in-memory map is the primary
+ * lookup; an account-scoped state file keeps tokens alive across restarts.
  */
 const contextTokenStore = new Map<string, string>();
 
@@ -20,11 +23,78 @@ function contextTokenKey(accountId: string, userId: string): string {
   return `${accountId}:${userId}`;
 }
 
+function resolveContextTokenFilePath(accountId: string): string {
+  return path.join(
+    resolveStateDir(),
+    WEIXIN_STATE_NAMESPACE,
+    "accounts",
+    `${accountId}.context-tokens.json`,
+  );
+}
+
+function persistContextTokens(accountId: string): void {
+  const prefix = `${accountId}:`;
+  const tokens: Record<string, string> = {};
+  for (const [key, value] of contextTokenStore) {
+    if (key.startsWith(prefix)) {
+      tokens[key.slice(prefix.length)] = value;
+    }
+  }
+
+  const filePath = resolveContextTokenFilePath(accountId);
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify(tokens, null, 0), "utf-8");
+  } catch (err) {
+    logger.warn(`persistContextTokens: failed to write ${filePath}: ${String(err)}`);
+  }
+}
+
+export function restoreContextTokens(accountId: string): void {
+  const filePath = resolveContextTokenFilePath(accountId);
+  try {
+    if (!fs.existsSync(filePath)) return;
+
+    const raw = fs.readFileSync(filePath, "utf-8");
+    const tokens = JSON.parse(raw) as Record<string, string>;
+    let count = 0;
+    for (const [userId, token] of Object.entries(tokens)) {
+      if (typeof token === "string" && token) {
+        contextTokenStore.set(contextTokenKey(accountId, userId), token);
+        count += 1;
+      }
+    }
+    logger.info(`restoreContextTokens: restored ${count} tokens for account=${accountId}`);
+  } catch (err) {
+    logger.warn(`restoreContextTokens: failed to read ${filePath}: ${String(err)}`);
+  }
+}
+
+export function clearContextTokensForAccount(accountId: string): void {
+  const prefix = `${accountId}:`;
+  for (const key of [...contextTokenStore.keys()]) {
+    if (key.startsWith(prefix)) {
+      contextTokenStore.delete(key);
+    }
+  }
+
+  const filePath = resolveContextTokenFilePath(accountId);
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (err) {
+    logger.warn(`clearContextTokensForAccount: failed to remove ${filePath}: ${String(err)}`);
+  }
+  logger.info(`clearContextTokensForAccount: cleared tokens for account=${accountId}`);
+}
+
 /** Store a context token for a given account+user pair. */
 export function setContextToken(accountId: string, userId: string, token: string): void {
   const k = contextTokenKey(accountId, userId);
   logger.debug(`setContextToken: key=${k}`);
   contextTokenStore.set(k, token);
+  persistContextTokens(accountId);
 }
 
 /** Retrieve the cached context token for a given account+user pair. */
@@ -35,6 +105,10 @@ export function getContextToken(accountId: string, userId: string): string | und
     `getContextToken: key=${k} found=${val !== undefined} storeSize=${contextTokenStore.size}`,
   );
   return val;
+}
+
+export function findAccountIdsByContextToken(accountIds: string[], userId: string): string[] {
+  return accountIds.filter((accountId) => contextTokenStore.has(contextTokenKey(accountId, userId)));
 }
 
 // ---------------------------------------------------------------------------

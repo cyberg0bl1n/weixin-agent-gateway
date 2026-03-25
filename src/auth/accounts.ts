@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { normalizeAccountId } from "openclaw/plugin-sdk";
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
+import { normalizeAccountId } from "openclaw/plugin-sdk/account-id";
+import type { OpenClawConfig } from "openclaw/plugin-sdk/core";
 
 import {
   LEGACY_WEIXIN_CHANNEL_ID,
@@ -11,6 +11,7 @@ import {
 } from "../constants.js";
 import { getWeixinRuntime } from "../runtime.js";
 import { resolveStateDir } from "../storage/state-dir.js";
+import { resolveFrameworkAllowFromPath } from "./pairing.js";
 import { logger } from "../util/logger.js";
 
 export const DEFAULT_BASE_URL = "https://ilinkai.weixin.qq.com";
@@ -73,6 +74,15 @@ export function registerWeixinAccountId(accountId: string): void {
 
   const updated = [...existing, accountId];
   fs.writeFileSync(resolveAccountIndexPath(), JSON.stringify(updated, null, 2), "utf-8");
+}
+
+/** Remove accountId from the persistent index. */
+export function unregisterWeixinAccountId(accountId: string): void {
+  const existing = listIndexedWeixinAccountIds();
+  const updated = existing.filter((id) => id !== accountId);
+  if (updated.length !== existing.length) {
+    fs.writeFileSync(resolveAccountIndexPath(), JSON.stringify(updated, null, 2), "utf-8");
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -180,12 +190,60 @@ export function saveWeixinAccount(
   }
 }
 
-/** Remove account data file. */
+/**
+ * Remove all transport-owned files associated with an account.
+ *
+ * This includes account credentials, sync state, persisted context tokens, and
+ * framework allow-from state so stale account removals do not leave routing
+ * residue behind.
+ */
 export function clearWeixinAccount(accountId: string): void {
-  try {
-    fs.unlinkSync(resolveAccountPath(accountId));
-  } catch {
-    // ignore if not found
+  const candidateIds = [accountId];
+  const rawId = deriveRawAccountId(accountId);
+  if (rawId) {
+    candidateIds.push(rawId);
+  }
+
+  for (const candidateId of candidateIds) {
+    const accountFiles = [
+      resolveAccountPath(candidateId),
+      path.join(resolveAccountsDir(), `${candidateId}.sync.json`),
+      path.join(resolveAccountsDir(), `${candidateId}.context-tokens.json`),
+      resolveFrameworkAllowFromPath(candidateId),
+    ];
+    for (const filePath of accountFiles) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch {
+        // ignore if not found
+      }
+    }
+  }
+}
+
+/**
+ * Remove stale accounts that share the same WeChat user identity as a newly
+ * bound account.
+ */
+export function clearStaleAccountsForUserId(
+  currentAccountId: string,
+  userId: string,
+  onClearContextTokens?: (accountId: string) => void,
+): void {
+  if (!userId) return;
+
+  for (const accountId of listIndexedWeixinAccountIds()) {
+    if (accountId === currentAccountId) continue;
+
+    const account = loadWeixinAccount(accountId);
+    if (account?.userId?.trim() === userId) {
+      logger.info(
+        `clearStaleAccountsForUserId: removing stale account=${accountId} (same userId=${userId})`,
+      );
+      onClearContextTokens?.(accountId);
+      clearWeixinAccount(accountId);
+      unregisterWeixinAccountId(accountId);
+    }
   }
 }
 
@@ -231,9 +289,51 @@ export function loadConfigRouteTag(accountId?: string): string | undefined {
 }
 
 /**
- * No-op stub — config reload is now handled externally via `openclaw gateway restart`.
+ * Ensure the current channel section exists in openclaw.json after QR login.
+ *
+ * This keeps login/setup flows working on newer hosts that expect the channel
+ * section to be present before the gateway treats it as configured.
  */
-export async function triggerWeixinChannelReload(): Promise<void> {}
+export async function triggerWeixinChannelReload(): Promise<void> {
+  try {
+    const { loadConfig, writeConfigFile } = await import("openclaw/plugin-sdk/config-runtime");
+    const cfg = loadConfig();
+    const channels = (cfg.channels ?? {}) as Record<string, unknown>;
+    const currentSection = (channels[WEIXIN_CHANNEL_ID] as Record<string, unknown> | undefined) ?? {};
+    const legacySection =
+      (channels[LEGACY_WEIXIN_CHANNEL_ID] as Record<string, unknown> | undefined) ?? {};
+
+    const hasCurrentSection = Boolean(channels[WEIXIN_CHANNEL_ID]);
+    const hasAccountsField = Object.prototype.hasOwnProperty.call(currentSection, "accounts");
+    if (hasCurrentSection && hasAccountsField) {
+      return;
+    }
+
+    const seedSection = hasCurrentSection ? currentSection : legacySection;
+    const seedAccounts = (seedSection.accounts as Record<string, unknown> | undefined) ?? {};
+    const currentAccounts = (currentSection.accounts as Record<string, unknown> | undefined) ?? {};
+
+    const updated: OpenClawConfig = {
+      ...cfg,
+      channels: {
+        ...channels,
+        [WEIXIN_CHANNEL_ID]: {
+          ...seedSection,
+          ...currentSection,
+          accounts: {
+            ...seedAccounts,
+            ...currentAccounts,
+          },
+        },
+      },
+    };
+
+    await writeConfigFile(updated);
+    logger.info(`triggerWeixinChannelReload: ensured channels.${WEIXIN_CHANNEL_ID} exists`);
+  } catch (err) {
+    logger.warn(`triggerWeixinChannelReload: failed to update config: ${String(err)}`);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Account resolution (merge config + stored credentials)

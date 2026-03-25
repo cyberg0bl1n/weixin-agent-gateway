@@ -1,13 +1,15 @@
+import { execSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
+import type { OpenClawConfig } from "openclaw/plugin-sdk/core";
 
 import {
   LEGACY_WEIXIN_CHANNEL_ID,
   WEIXIN_CHANNEL_ID,
   WEIXIN_PLUGIN_ID,
 } from "./constants.js";
+import { resolveWeixinPreferredTmpDir } from "./util/openclaw-tmp-dir.js";
 
 /** Minimal subset of commander's Command used by registerWeixinCli. */
 type CliCommand = {
@@ -47,7 +49,7 @@ function resolveLogFileName(file: string): string {
 }
 
 function mainLogDir(): string {
-  return path.join("/tmp", "openclaw");
+  return resolveWeixinPreferredTmpDir();
 }
 
 function getConfiguredUploadUrl(config: OpenClawConfig): string | undefined {
@@ -62,6 +64,26 @@ export function registerWeixinCli(params: { program: CliCommand; config: OpenCla
   const { program, config } = params;
 
   const root = program.command(WEIXIN_PLUGIN_ID).description("Weixin channel utilities");
+
+  root
+    .command("uninstall")
+    .description("Uninstall the Weixin plugin and clean up channel config")
+    .action(async () => {
+      const { loadConfig, writeConfigFile } = await import("openclaw/plugin-sdk/config-runtime");
+      const cfg = loadConfig();
+      const channels = { ...((cfg.channels ?? {}) as Record<string, unknown>) };
+      if (channels[WEIXIN_CHANNEL_ID]) {
+        delete channels[WEIXIN_CHANNEL_ID];
+        await writeConfigFile({ ...cfg, channels });
+        console.log(`[weixin] Cleaned up channels.${WEIXIN_CHANNEL_ID} config.`);
+      }
+
+      try {
+        execSync(`openclaw plugins uninstall ${WEIXIN_PLUGIN_ID}`, { stdio: "inherit" });
+      } catch {
+        // The uninstall command prints its own error details when it fails.
+      }
+    });
 
   root
     .command("logs-upload")

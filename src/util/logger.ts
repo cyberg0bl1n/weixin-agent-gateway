@@ -3,14 +3,15 @@ import os from "node:os";
 import path from "node:path";
 
 import { WEIXIN_PLUGIN_ID } from "../constants.js";
+import { resolveWeixinPreferredTmpDir } from "./openclaw-tmp-dir.js";
 
 /**
  * Plugin logger — writes JSON lines to the main openclaw log file:
- *   /tmp/openclaw/openclaw-YYYY-MM-DD.log
+ *   <tmpDir>/openclaw-YYYY-MM-DD.log
  * Same file and format used by all other channels.
  */
 
-const MAIN_LOG_DIR = path.join("/tmp", "openclaw");
+const MAIN_LOG_DIR = resolveWeixinPreferredTmpDir();
 const SUBSYSTEM = `gateway/channels/${WEIXIN_PLUGIN_ID}`;
 const RUNTIME = "node";
 const RUNTIME_VERSION = process.versions.node;

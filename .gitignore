@@ -31,3 +31,7 @@ yarn-error.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# Local OpenSpec artifacts
+openspec/
+.codex/

@@ -1,9 +1,6 @@
 ﻿import path from "node:path";
 
-import {
-  resolvePreferredOpenClawTmpDir,
-} from "openclaw/plugin-sdk";
-import type { PluginRuntime } from "openclaw/plugin-sdk";
+import type { OpenClawConfig, PluginRuntime } from "openclaw/plugin-sdk/core";
 
 import type { WeixinMessage } from "../api/types.js";
 import { MessageItemType } from "../api/types.js";
@@ -28,6 +25,7 @@ import {
 import { createLightweightTextReplyBudgeter } from "../transport/weixin/outbound/lightweight-text-budget.js";
 import { createWeixinTypingTransportConfig } from "../transport/weixin/outbound/typing.js";
 import { logger } from "../util/logger.js";
+import { resolveWeixinPreferredTmpDir } from "../util/openclaw-tmp-dir.js";
 import { redactBody } from "../util/redact.js";
 
 import { isDebugMode } from "./debug-mode.js";
@@ -41,12 +39,15 @@ import type { WeixinInboundMediaOpts } from "./inbound.js";
 import { sendMessageWeixin } from "./send.js";
 import { handleSlashCommand } from "./slash-commands.js";
 
-const MEDIA_OUTBOUND_TEMP_DIR = path.join(resolvePreferredOpenClawTmpDir(), "weixin/media/outbound-temp");
+const MEDIA_OUTBOUND_TEMP_DIR = path.join(
+  resolveWeixinPreferredTmpDir(),
+  "weixin/media/outbound-temp",
+);
 
 /** Dependencies for processOneMessage, injected by the monitor loop. */
 export type ProcessMessageDeps = {
   accountId: string;
-  config: import("openclaw/plugin-sdk/core").OpenClawConfig;
+  config: OpenClawConfig;
   channelRuntime: PluginRuntime["channel"];
   baseUrl: string;
   cdnBaseUrl: string;

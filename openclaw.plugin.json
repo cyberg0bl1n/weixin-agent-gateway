@@ -1,5 +1,6 @@
 {
   "id": "weixin-agent-gateway",
+  "version": "1.0.5",
   "channels": ["weixin-agent-gateway"],
   "configSchema": {
     "type": "object",

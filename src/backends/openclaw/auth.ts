@@ -1,8 +1,8 @@
 import {
   resolveDirectDmAuthorizationOutcome,
   resolveSenderCommandAuthorizationWithRuntime,
-} from "openclaw/plugin-sdk";
-import type { OpenClawConfig, PluginRuntime } from "openclaw/plugin-sdk";
+} from "openclaw/plugin-sdk/command-auth";
+import type { OpenClawConfig, PluginRuntime } from "openclaw/plugin-sdk/core";
 
 import { loadWeixinAccount } from "../../auth/accounts.js";
 import { readFrameworkAllowFromList } from "../../auth/pairing.js";

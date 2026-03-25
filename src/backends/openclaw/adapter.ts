@@ -1,11 +1,11 @@
-import type { PluginRuntime } from "openclaw/plugin-sdk";
+import type { OpenClawConfig, PluginRuntime } from "openclaw/plugin-sdk/core";
 
 import type { WeixinBackendAdapter, WeixinBackendDispatchContext } from "../contracts.js";
 
 import { logger } from "../../util/logger.js";
 
 type OpenClawBackendDispatchContext = {
-  config: import("openclaw/plugin-sdk/core").OpenClawConfig;
+  config: OpenClawConfig;
   channelRuntime: PluginRuntime["channel"];
   agentId?: string | null;
   finalized: unknown;

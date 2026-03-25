@@ -1,4 +1,4 @@
-import type { OpenClawConfig, PluginRuntime } from "openclaw/plugin-sdk";
+import type { OpenClawConfig, PluginRuntime } from "openclaw/plugin-sdk/core";
 
 import { WEIXIN_CHANNEL_ID } from "../../constants.js";
 

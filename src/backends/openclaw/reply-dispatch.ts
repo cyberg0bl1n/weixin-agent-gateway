@@ -1,5 +1,5 @@
-import { createTypingCallbacks } from "openclaw/plugin-sdk";
-import type { OpenClawConfig, PluginRuntime } from "openclaw/plugin-sdk";
+import { createTypingCallbacks } from "openclaw/plugin-sdk/channel-runtime";
+import type { OpenClawConfig, PluginRuntime } from "openclaw/plugin-sdk/core";
 
 export function createOpenClawTypingCallbacks(
   params: Parameters<typeof createTypingCallbacks>[0],
